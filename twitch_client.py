@@ -5,7 +5,6 @@ from discord.ext import tasks
 import os
 from dotenv import load_dotenv
 import urllib.request
-import datetime
 
 from sqlite import get_all_data_tuple, insert_stream_start_data, sqlite_init
 

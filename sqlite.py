@@ -1,4 +1,3 @@
-import json
 import sqlite3
 
 def sqlite_init() -> None:
