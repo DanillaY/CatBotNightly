@@ -15,15 +15,16 @@ twitch_secret = os.getenv('TWITCH_BOT_SECRET')
 twitch_access = os.getenv('TWITCH_ACCESS_TOKEN')
 
 async def send_discord_notification(json_channels,tup,channel):
-    for channels in json_channels['data']:
 
-        insert_stream_start_data(channels['started_at'],tup[0])
+    for channels in json_channels['data']:
 
         #check if it is not the same stream
         if channels['id'] == str(tup[0]) and tup[3] != None and tup[3] != channels['started_at']:
+            insert_stream_start_data(channels['started_at'],tup[0])
             await channel.send(f'@here YOOO {tup[1].upper()} IS LIVE CHECKOUT {tup[2]}')
 
         elif channels['id'] == str(tup[0]) and tup[3] == None:
+            insert_stream_start_data(channels['started_at'],tup[0])
             await channel.send(f'@here YOOO {tup[1].upper()} IS LIVE CHECKOUT {tup[2]}')
 
 class Twitch_Client(discord.Client):
