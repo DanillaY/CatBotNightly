@@ -5,10 +5,12 @@ import discord
 from discord.ext import tasks, commands
 import os
 from dotenv import load_dotenv
+from requests import get
 import youtube_dl
 import urllib.request
 
 import discord.ext
+import yt_dlp
 from sqlite import get_all_data_tuple, insert_stream_start_data, sqlite_init
 
 load_dotenv()
@@ -26,17 +28,13 @@ async def send_discord_notification(json_channels,tup,channel):
 
 class Discord_Client(commands.Cog):
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         super().__init__()
         sqlite_init()
         self.counter = 0
         self.listen_for_twitch_channels.start()
         self.bot = bot
-
-    #async def setup_hook(self) -> None:
-     #   print('111')
-     #   await sqlite_init()
-     #   self.loop.create_task(self.isten_for_twitch_channels())
+        self.FFMPEG_OPT = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -44,9 +42,11 @@ class Discord_Client(commands.Cog):
         time = c.strftime('%H:%M:%S')
         print(f'[{time}] Bot started working')
     
-    @tasks.loop(seconds=10)
+    @tasks.loop(minutes=10)
     async def listen_for_twitch_channels(self):
         try:
+            time = datetime.now().strftime('%H:%M:%S')
+            print(f'[{time}] Sending requests to twitch api')
             for tup in get_all_data_tuple():
                 if len(tup) >= 3:
                     req = urllib.request.Request('https://api.twitch.tv/helix/search/channels?live_only=true&query='+str(tup[1])) 
@@ -58,8 +58,7 @@ class Discord_Client(commands.Cog):
                     ch = self.bot.get_channel(1258405419273949276)
                     await send_discord_notification(json_channels,tup,ch)
         except BaseException as e:
-            print('Could not notify about streams')
-            print(e)
+            print('Could not notify about streams', e)
 
     @commands.command()
     async def cat_pic(self,ctx):
@@ -80,10 +79,16 @@ class Discord_Client(commands.Cog):
     async def radio(self,ctx):
         if ctx.author.voice != None:
             channel: discord.VoiceChannel = ctx.author.voice.channel
-            connection: discord.VoiceClient = await channel.connect()
-            #await urllib.request.urlretrieve('http://radio.garden/api/ara/content/listen/vbFsCngB/channel.mp3','radio.mp3')
+            connection: discord.VoiceClient = self.bot.voice_clients
 
-            audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source='mis.mp3')
+            if len(self.bot.voice_clients) == 0:
+                connection = await channel.connect()
+
+            with yt_dlp.YoutubeDL(params={}) as ydl:
+                info = ydl.extract_info('http://radio.garden/api/ara/content/listen/vbFsCngB/channel.mp3', download=False)
+                URL = info['formats'][0]['url']
+
+            audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL)
             connection.play(audio) 
             
         else:
@@ -98,8 +103,7 @@ class Discord_Client(commands.Cog):
             try:
                 print('TO DO download mp3 and rewrite it to tmp file')
             except BaseException as e:
-                print('Could not play yt video')
-                print(e)
+                print('Could not play yt video', e)
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
 

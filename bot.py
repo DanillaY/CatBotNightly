@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import urllib.request
 
 import requests
+import yt_dlp
 
 from cogs.discord_client import Discord_Client
 
@@ -45,9 +46,9 @@ async def cog_load(client : commands.Bot):
 async def main():
     client = commands.Bot(command_prefix=commands.when_mentioned_or('!'), intents=discord.Intents.all())
     await cog_load(client)
-    #async with discord.bot:
-    #   await listen_for_twitch_channels.start()
     await client.start(secret)
 
 asyncio.run(main())
+
 #curl -L -v http://radio.garden/api/ara/content/listen/vbFsCngB/channel.mp3 -A "Mozilla/5.0 (compatible;  MSIE 7.01; Windows NT 5.0)" --output mis.mp3
+#await urllib.request.urlretrieve('http://radio.garden/api/ara/content/listen/vbFsCngB/channel.mp3','radio.mp3')
