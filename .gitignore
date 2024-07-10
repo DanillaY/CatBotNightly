@@ -1,4 +1,6 @@
 twitch.db
+radio.db
 .env
 __pycache__/
 cogs/__pycache__/
+database/__pycache__/
