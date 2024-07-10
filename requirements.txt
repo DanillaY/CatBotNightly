@@ -1,6 +1,4 @@
-discord==2.3.2
-discord.py==2.4.0
-dotenv==0.0.5
+pandas==2.2.2
 python-dotenv==1.0.1
-requests==2.32.3
-urllib3==2.2.2
+Requests==2.32.3
+yt_dlp==2024.7.9

@@ -23,8 +23,9 @@ channel_id = os.getenv('TEXT_CHANNEL_ID')
 async def send_discord_notification(json_channels,streamer: Streamer,channel):
     for channels in json_channels['data']:
         #check if it is not the same stream
-        if channels['id'] == str(streamer.id) and streamer.start_stream != channels['started_at'] and channel != None:
-            insert_stream_start_data(channels['started_at'],streamer.id)
+
+        if channels['id'] == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
+            insert_stream_start_data(channels['started_at'], str(streamer.id))
             await channel.send(f'@here YOOO {streamer.query.upper()} IS LIVE CHECKOUT {streamer.streamer_link}')
 
 async def play_radio(self,ctx,radio_id):
@@ -34,7 +35,7 @@ async def play_radio(self,ctx,radio_id):
         connection: discord.VoiceClient = self.bot.voice_clients
         
         if len(self.bot.voice_clients) == 0:
-                connection = await channel.connect() 
+            connection = await channel.connect()
 
         if connection.is_playing() == False:
             with yt_dlp.YoutubeDL(params={}) as ydl:
@@ -59,9 +60,9 @@ class Discord_Client(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         twitch_sqlite_init()
-        self.counter = 0
         self.listen_for_twitch_channels.start()
         self.bot = bot
+        self.youtube_queue = []
         self.FFMPEG_OPT = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
     @commands.Cog.listener()
@@ -92,14 +93,17 @@ class Discord_Client(commands.Cog):
     
     @commands.command()
     async def catbot_help(self,ctx):
-        message = 'Bot commands: \n'\
-        '-----------------------------------\n'\
+        message = '\t\t\t\tBot commands\n'\
+        '----------------------------------------------\n'\
         '!cat_pic - this command will send you 🐱\n\n'\
         '!cat_fact - this command will send you an interesting fact about 🐱\n\n'\
         '!radio - accepts radio id and plays it (example: !radio F8t6xJ3p) 🎵\n\n'\
         '!radio_available_dump - this command will send you information about some radios that you could listen 📻\n\n'\
         '!radio_search_by_country - accepts country name and shows available radiostations 🏴 (example: !radio_search_by_country united kingdom)\n\n'\
         '!radio_random - this command will play a random radiostation from the world 🌍\n\n'\
+        '!stop - this command will force the bot to leave the voice channel even if he is playing (please you this command after you are done using the bot) ⛔\n\n'\
+        '!pause - this command will pause whatever song is playing right now\n\n'\
+        '!resume - this command will resume the paused song\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 
@@ -134,46 +138,76 @@ class Discord_Client(commands.Cog):
             await ctx.send('```'+message+'```')
 
     @commands.command()
-    async def radio(self,ctx, radio_id):
-        if ctx.author.voice != None:
+    async def stop(self,ctx) -> None:
+        connection: discord.VoiceClient = self.bot.voice_clients[0]
+        if ctx.author.voice != None and (connection.is_playing() or connection.is_paused()):
+           await connection.disconnect(force=True)
+        else:
+            await ctx.channel.send('This song is unstoppable')
+    
+    @commands.command()
+    async def pause(self,ctx) -> None:
+        connection: discord.VoiceClient = self.bot.voice_clients[0]
+        if ctx.author.voice != None and connection.is_playing():
+           connection.pause()
+        else:
+            await ctx.channel.send('Cant pause current song')
+
+    @commands.command()
+    async def resume(self,ctx) -> None:
+        connection: discord.VoiceClient = self.bot.voice_clients[0]
+        if ctx.author.voice != None and connection.is_paused():
+           connection.resume()
+        else:
+            await ctx.channel.send('Cant resume current song')
+
+    @commands.command()
+    async def radio(self,ctx, radio_id) -> None:
+        if ctx.author.voice != None and len(self.youtube_queue) == 0:
             await play_radio(self,ctx,radio_id)
         elif does_radio_db_exist(radio_id) == False:
             await ctx.channel.send('Radio with that id does not exist')
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
-        '''
-        if ctx.author.voice != None:
-            channel: discord.VoiceChannel = ctx.author.voice.channel
-            connection: discord.VoiceClient = self.bot.voice_clients
 
-            if len(self.bot.voice_clients) == 0:
-                connection = await channel.connect() 
-
-            if connection.is_playing() == False:
-                with yt_dlp.YoutubeDL(params={}) as ydl:
-                    info = ydl.extract_info(f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3', download=False)
-                    URL = info['formats'][0]['url']
-
-                audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL)
-                connection.play(audio) 
-        '''
     @commands.command()
-    async def radio_random(self,ctx):
-        if ctx.author.voice != None:
+    async def radio_random(self,ctx) -> None:
+        if ctx.author.voice != None and len(self.youtube_queue) == 0:
             radio:Radio = get_random_radio()
             await play_radio(self,ctx,radio.id)
             await ctx.channel.send(f'Right now playing {radio.title}, country {radio.country}, id {radio.id}')
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
 
+    #TO DO: cant find the ffmped path even tho its installed???
+    async def play_next_yt(self,connection) -> None:
+        if len(self.youtube_queue) > 0:
+            URL = self.youtube_queue[0]
+            self.youtube_queue.pop(0)
+
+            #audio = discord.FFmpegPCMAudio(before_options='-reconcect 1 -reconcected_streamed 1 -reconcect_delay_max 5',source=URL,options= '-vn', executable=ffmpeg_exe_path)
+            print(URL)
+            audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL)
+            connection.play(audio,after=lambda e: self.play_next_yt())
+
+    #TO DO: cant find the ffmped path even tho its installed???
     @commands.command()
     async def yt(self,ctx,link) -> None:
         if ctx.author.voice != None:
             channel: discord.VoiceChannel = ctx.author.voice.channel
-            connection: discord.VoiceClient = await channel.connect()
+            connection: discord.VoiceClient = self.bot.voice_clients
+
+            if len(self.bot.voice_clients) == 0:
+                connection = await channel.connect()
 
             try:
-                print('TO DO download mp3 and rewrite it to tmp file')
+                if connection.is_playing() == False and connection.is_paused() == False:
+                    with yt_dlp.YoutubeDL(params={}) as ydl:
+                        info = ydl.extract_info(link, download=False)
+                        URL = info['formats'][0]['url']
+                        self.youtube_queue.append(URL)
+
+                        await self.play_next_yt(connection)
             except BaseException as e:
                 print('Could not play yt video', e)
         else:
@@ -186,10 +220,3 @@ class Discord_Client(commands.Cog):
         
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Discord_Client(client))
-
-#TO DO this method locks the whole program, in order to make bot leade after playing the source need to figure out how to use that method
-def after_voice_msg_done(channel:discord.VoiceChannel, client:discord.voice_client) -> None:
-    coro = channel.send('Song is done!')
-    fut = asyncio.run_coroutine_threadsafe(coro, client.loop)
-    fut.result()
-    client.disconnect()

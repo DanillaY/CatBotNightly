@@ -25,7 +25,7 @@ def insert_stream_start_data(start_stream, id) -> None:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
 
-    cursor.execute('UPDATE Streamers SET start_stream = ? WHERE id = ?', (start_stream, id))
+    cursor.execute('UPDATE twitch SET start_stream = ? WHERE id = ?',(start_stream, id))
     connection.commit()
     connection.close()
 
@@ -65,7 +65,6 @@ def get_all_from_table(db, where = ''):
     if where == '':
         cursor.execute('SELECT * FROM ' + db)
     else:
-        print(where)
         cursor.execute('SELECT * FROM ' + db + ' WHERE ' + where)
 
     tuple_list = cursor.fetchall()
