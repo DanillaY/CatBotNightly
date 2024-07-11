@@ -28,6 +28,4 @@ async def main():
 
 asyncio.run(main())
 
-#asyncio.run(radio_sqlite_init())
-#curl -L -v http://radio.garden/api/ara/content/listen/JORijw7q/channel.mp3 -A "Mozilla/5.0 (compatible;  MSIE 7.01; Windows NT 5.0)" --output mis.mp3
-#await urllib.request.urlretrieve('http://radio.garden/api/ara/content/listen/vbFsCngB/channel.mp3','radio.mp3')
+#asyncio.run(radio_sqlite_init()) initialize radio db once so that you wont get block on their api

@@ -1,9 +1,9 @@
 class Streamer:
-    def __init__(self, id, query, streamer_link, start_stream):
+    def __init__(self, id:str, query:str, stream_link:str, start_stream:str):
         #take id variable from api call
         self.id:str = id
         self.query:str = query
-        self.streamer_link:str= streamer_link
+        self.stream_link:str= stream_link
         self.start_stream:str = start_stream
 
 def list_tuple_to_streamer_list(list: list[tuple]) -> list:
