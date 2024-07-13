@@ -30,11 +30,11 @@ def insert_stream_start_data(start_stream, id) -> None:
     connection.close()
 
 def get_twitch_db_streamers() -> list:
-    tuple_list = get_all_from_table('twitch')
+    tuple_list = _get_all_from_table('twitch')
     return list_tuple_to_streamer_list(tuple_list)
 
 def get_radio_db_info() -> list:
-    tuple_list = get_all_from_table('radio')
+    tuple_list = _get_all_from_table('radio')
     return list_tuple_to_radio_list(tuple_list)
 
 def does_radio_db_exist(radio_id:str) -> bool:
@@ -49,16 +49,15 @@ def get_random_radio() -> Radio:
     radio: Radio = random.choice(get_radio_db_info())
     return radio
 
-#use this method only in this file
 def get_radios_by_country(country:str) -> list[Radio]:
     try:
-        tuple_list = get_all_from_table(db='radio', where='LOWER(Country) =='+str.lower("'"+country+"'"))
+        tuple_list = _get_all_from_table(db='radio', where='LOWER(Country) =='+str.lower("'"+country+"'"))
     except BaseException as e:
         print(e)
     return list_tuple_to_radio_list(tuple_list)
 
 #use this method only in this file
-def get_all_from_table(db, where = ''):
+def _get_all_from_table(db, where = ''):
     connection = sqlite3.connect(db+'.db')
     cursor = connection.cursor()
 
