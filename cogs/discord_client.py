@@ -27,17 +27,18 @@ class Discord_Client(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         twitch_sqlite_init()
-        self.listen_for_twitch_channels.start()
+        #self.listen_for_twitch_channels.start()
         self.listen_for_twitch_channels_specific.start()
         self.listen_if_bot_unused.start()
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
         self.voice_channel:discord.VoiceChannel = None
-        self.youtube_queue = []
+        self.youtube_queue: list[str] = []
+        self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await print_message('Bot started working')
+        await print_message('Discord cog started working')
     
     @tasks.loop(minutes=30)
     async def listen_if_bot_unused(self):
@@ -118,32 +119,28 @@ class Discord_Client(commands.Cog):
         await print_message('Sending a cat fact')
         await ctx.send(json_object['fact'])
 
-    #shows first few records of radios in database (because of the 2000 chars limit per message)
-    @commands.command()
-    async def radio_available_dump(self,ctx) -> None:
-        message = join_radio_info(get_radio_db_info())
-        await ctx.send('```'+message+'```')
-
-    @commands.command()
-    async def radio_search_by_country(self,ctx,country) -> None:
-        radios = get_radios_by_country(country)
-        if len(radios) == 0:
-            await ctx.send('Nothing was found in that country')
-        else:
-            await print_message('Bot is searching radios by country')
-            message = join_radio_info(get_radios_by_country(country))
-            await ctx.send('```'+message+'```')
-
+    #TODO stop method doesnt work with radio player
     @commands.command()
     async def stop(self,ctx) -> None:
         connection: discord.VoiceClient = self.voice_client
-        if ctx.author.voice != None and connection != None and connection != None:
+        if ctx.author.voice != None and connection != None:
            await connection.disconnect(force=True)
            await print_message('Bot is stopped')
            self.voice_channel = None
            self.voice_client = None
+           self.youtube_queue.clear()
         else:
             await ctx.channel.send('This song is unstoppable')
+    
+    #TO DO fix skip method
+    @commands.command()
+    async def skip_yt(self,ctx):
+        if ctx.author.voice != None or (self.voice_channel != None and self.voice_client != None) or len(self.youtube_queue)>0:
+            if self.voice_client.is_playing():
+                self.voice_client.stop()
+                await self.play_next_yt(ctx)
+        else:
+            await ctx.channel.send('Could not skip the song')
     
     @commands.command()
     async def pause(self,ctx) -> None:
@@ -163,25 +160,6 @@ class Discord_Client(commands.Cog):
             await ctx.channel.send('Cant resume current song')
 
     @commands.command()
-    async def radio(self,ctx, radio_id) -> None:
-        if ctx.author.voice != None and len(self.youtube_queue) == 0:
-            await print_message('Started playing radio')
-            await play_radio(self,ctx,radio_id)
-        elif does_radio_db_exist(radio_id) == False:
-            await ctx.channel.send('Radio with that id does not exist')
-        else:
-            await ctx.channel.send('You should be in the voice channel to use that command')
-
-    @commands.command()
-    async def radio_random(self,ctx) -> None:
-        if ctx.author.voice != None and len(self.youtube_queue) == 0:
-            radio:Radio = get_random_radio()
-            await play_radio(self,ctx,radio.id)
-            await ctx.channel.send(f'Right now playing {radio.title}, country {radio.country}, id {radio.id}')
-        else:
-            await ctx.channel.send('You should be in the voice channel to use that command')
-    
-    @commands.command()
     async def status(self,ctx) -> None:
         connection = self.bot.voice_clients
         await print_message('Sending bot status')
@@ -194,8 +172,24 @@ class Discord_Client(commands.Cog):
                 await ctx.channel.send('The bot is playing music')
             elif connection[0].is_connected():
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
+    
+    async def play_next_yt(self, ctx):
 
-    #TODO make queue for yt videos and add skip command
+        if len(self.youtube_queue) > 0:
+            self.youtube_queue.pop(0)
+            try:
+                await self.yt(ctx, self.youtube_queue[0] if len(self.youtube_queue) > 0 else None)
+            except BaseException as e:
+                await print_message(e)
+            
+        else:
+            ctx.channel.send('Youtube queue has ended')
+            await self.voice_client.disconnect()
+
+    async def add_to_yt_queue(self,ctx,link):
+        await print_message('Added new song to the queue')
+        self.youtube_queue.append(link)
+
     @commands.command()
     async def yt(self,ctx,link) -> None:
 
@@ -203,27 +197,27 @@ class Discord_Client(commands.Cog):
             await ctx.channel.send('You should be in the voice channel to use that command')
             return
 
-        channel: discord.VoiceChannel = ctx.author.voice.channel
-        connection: discord.VoiceClient = await connect_bot_to_channel_if_not(self,channel)
-
         try:
-            if connection.is_playing() == False and connection.is_paused() == False:
+            channel: discord.VoiceChannel = ctx.author.voice.channel if self.voice_channel == None else self.voice_channel
+            connection: discord.VoiceClient = await connect_bot_to_channel_if_not(self,channel)
+
+            if self.voice_client.is_playing() and link != None:
+                await self.add_to_yt_queue(ctx,link)
+                await ctx.channel.send('Song was added the queue')
+            else:
                 with yt_dlp.YoutubeDL({'options': '-vn'}) as ydl:
-                    FFMPEG_OPTIONS = { 'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 200M', 'options': '-vn' }
-                    info = ydl.extract_info(link, download=False)
+                    loop = asyncio.get_event_loop()
+                    info = await loop.run_in_executor(None, lambda: ydl.extract_info(link, download=False))
                     URL = info['requested_formats'][1]['url']
                     self.youtube_queue.append(URL)
 
-            audio = discord.FFmpegPCMAudio(source=URL, **FFMPEG_OPTIONS, executable=ffmpeg_exe_path)
-            connection.play(source=audio)
+                    audio = discord.FFmpegPCMAudio(source=URL, **self.FFMPEG_OPTIONS, executable=ffmpeg_exe_path)
+                    play_next = lambda e: asyncio.run_coroutine_threadsafe(self.play_next_yt(ctx), self.bot.loop)
+                connection.play(source=audio, after=play_next)
+   
         except BaseException as e:
-            print_message('Could not play yt video', e)
-            connection.disconnect(force=True)
-        
-    @radio.error
-    async def info_error(ctx, error) -> None:
-        if isinstance(error, commands.BadArgument):
-            await ctx.send('Error?...' + str(error))
+            await print_message(f'Could not play yt video {e}')
+            await connection.disconnect(force=True)
 
     async def async_cleanup(self):
         print_message('Closing the bot connection')
@@ -236,28 +230,13 @@ async def setup(client: commands.Bot) -> None:
     await client.add_cog(Discord_Client(client))
 
 async def connect_bot_to_channel_if_not(self:Discord_Client,channel:discord.VoiceChannel) -> discord.VoiceClient:
-    if self.voice_client == None and self.voice_channel == None:
+    if self.voice_client == None or self.voice_channel == None:
             connection = await channel.connect()
             self.voice_client = connection
             self.voice_channel = channel
             return connection
-
-async def play_radio(self:Discord_Client,ctx,radio_id) -> None:
-
-    try:
-        channel: discord.VoiceChannel = ctx.author.voice.channel
-        connection: discord.VoiceClient = await connect_bot_to_channel_if_not(self,channel)
-
-        if connection.is_playing() == False:
-            with yt_dlp.YoutubeDL() as ydl:
-                info = ydl.extract_info(f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3', download=False)
-                URL = info['formats'][0]['url']
-
-                audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL)
-                connection.play(audio)
-    except:
-        await ctx.send('Could not stream that radio. Sorry :(')
-        await connection.disconnect()
+    else:
+        return self.voice_client
 
 async def send_discord_notification(json_channels,streamer: Streamer,channel) -> None:
     for channels in json_channels['data']:
