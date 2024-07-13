@@ -1,13 +1,12 @@
-
 import os
 import discord
 from discord.ext import commands
 
+from cogs.discord_client import *
 from logger import print_message
 
 ffmpeg_exe_path = os.getenv('FFMPEG_EXE_PATH')
 
-#TO DO fix calling commands
 class Audio_Client(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
@@ -16,11 +15,11 @@ class Audio_Client(commands.Cog):
         self.discord_cog = bot.get_cog('Discord_Client')
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
 
-#TODO stop method doesnt work with radio player
     @commands.command()
     async def stop(self,ctx) -> None:
-        print(self.discord_cog.voice_client, ctx.author.voice)
-        connection: discord.VoiceClient = self.discord_cog.voice_client
+        channel: discord.VoiceChannel = ctx.author.voice.channel if self.discord_cog.voice_channel == None else self.discord_cog.voice_channel
+        connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
+        
         if ctx.author.voice != None and connection != None:
            await connection.disconnect(force=True)
            await print_message('Bot is stopped')

@@ -57,11 +57,6 @@ class Radio_Client(commands.Cog):
             message = join_radio_info(get_radios_by_country(country))
             await ctx.send('```'+message+'```')
     
-    async def print_message(message:str) -> None:
-        c = datetime.now()
-        time = c.strftime('%H:%M:%S')
-        print(f'[{time}] {message}')
-    
     async def close(self):
         await self.async_cleanup()
         await super().close()
@@ -94,6 +89,8 @@ async def play_radio(self:Radio_Client,ctx,radio_id) -> None:
     except BaseException as e:
         await print_message('Could not stream that radio', str(e))
         await ctx.send('Could not stream that radio. Sorry :(')
+        self.discord_cog.voice_channel = None
+        self.discord_cog.voice_client = None
         await connection.disconnect()
 
 def join_radio_info(radios:list[Radio]) -> str:

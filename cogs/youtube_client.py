@@ -74,6 +74,8 @@ class Youtube_Client(commands.Cog):
    
         except BaseException as e:
             await print_message(f'Could not play yt video {e}', str(e))
+            self.discord_cog.voice_channel = None
+            self.discord_cog.voice_client = None
             await connection.disconnect(force=True)
 
     @commands.command()

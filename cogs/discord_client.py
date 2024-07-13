@@ -8,6 +8,7 @@ import urllib.request
 import discord.ext
 from cogs.radio_client import Radio_Client
 from cogs.youtube_client import Youtube_Client
+from cogs.fx_client import Audio_Client
 from database.sqlite import get_twitch_db_streamers, insert_stream_start_data, twitch_sqlite_init
 from database.streamer import Streamer
 from logger import print_message
@@ -18,6 +19,7 @@ from logger import print_message
     dont move any files from cogs folder,
     this is a cog master, you should get vars like voice_client by self.bot.get_cog('Discord_Client'),
     dont create new instances of the master fields in other cogs
+    dont name files that starts with the latter a or b in this file because discord cog should be the first one to load
 '''
 
 load_dotenv()
@@ -68,7 +70,7 @@ class Discord_Client(commands.Cog):
                     
                     await send_discord_notification(json_channels,streamer,ch)
         except BaseException as e:
-            print('Could not notify about streams\n', e)
+            print_message('Could not notify about streams\n', e)
 
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
@@ -90,7 +92,7 @@ class Discord_Client(commands.Cog):
             
 
         except BaseException as e:
-            print('Could not notify about streams\n', e)
+            print_message('Could not notify about streams\n', e)
     
     @commands.command()
     async def catbot_help(self,ctx):
@@ -139,7 +141,7 @@ class Discord_Client(commands.Cog):
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
 
     async def async_cleanup(self):
-        print('Closing the bot connection')
+        print_message('Closing the bot connection')
 
     async def close(self):
         await self.async_cleanup()
@@ -172,7 +174,7 @@ async def _connect_bot_to_channel_if_not(self:Discord_Client,channel:discord.Voi
         return self.voice_client
 
 #use this method to access vc and channel from other cogs
-async def connect_bot_to_channel_if_not_other_cog(self: Radio_Client | Youtube_Client, channel:discord.VoiceChannel) -> discord.VoiceClient:
+async def connect_bot_to_channel_if_not_other_cog(self: Radio_Client | Youtube_Client | Audio_Client, channel:discord.VoiceChannel) -> discord.VoiceClient:
     if self.discord_cog.voice_client == None or self.discord_cog.voice_channel == None:
         connection = await channel.connect()
         self.discord_cog.voice_client = connection
