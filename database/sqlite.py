@@ -85,7 +85,7 @@ async def radio_sqlite_init():
         for data in json_radios['data']['content'][0]['items']:
             db_radio_id = str(data['page']['url']).split('/')[-1]
             db_title_place = data['page']['title']
-            print(db_title_place, db_place_country)
+
             cursor.execute('INSERT OR REPLACE INTO radio VALUES(?, ?, ?, ?)', (db_radio_id, db_title_place,db_place_country,db_id_place))
             await asyncio.sleep(randint(2,4))
             connection.commit()

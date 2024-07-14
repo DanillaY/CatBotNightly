@@ -1,3 +1,6 @@
+from logger import print_message
+
+
 class Radio:
     def __init__(self, id, title, country):
         self.id:str = id

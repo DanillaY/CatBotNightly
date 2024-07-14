@@ -19,7 +19,7 @@ from logger import print_message
     dont move any files from cogs folder,
     this is a cog master, you should get vars like voice_client by self.bot.get_cog('Discord_Client'),
     dont create new instances of the master fields in other cogs
-    dont name files that starts with the latter a or b in this file because discord cog should be the first one to load
+    dont name files that starts with the latter a or b in this folder because discord cog should be the first one to load
 '''
 
 load_dotenv()
@@ -70,7 +70,7 @@ class Discord_Client(commands.Cog):
                     
                     await send_discord_notification(json_channels,streamer,ch)
         except BaseException as e:
-            print_message('Could not notify about streams\n', e)
+            await print_message('Could not notify about streams\n', e)
 
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
@@ -83,16 +83,16 @@ class Discord_Client(commands.Cog):
                 streamer = Streamer(stream['user_id'],stream['user_login'],'https://www.twitch.tv/'+stream['user_login'],stream['started_at'])
 
                 if(len(game_tags) > 0):
-                    for tag_stream in stream['tags']:
-                        for tag_search in game_tags:
-                            if (str.lower(tag_search) == str.lower(tag_stream)) or (tag_search in stream['title']):
-                                await ch.send(f'@here YOOO {streamer.query.upper()} IS LIVE CHECKOUT {streamer.stream_link}')
+                    list(map(lambda x: x.lower(), stream['tags']))
+                    for tag_stream in game_tags:
+                        if (str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])):
+                            await ch.send(f'@here YOOO {streamer.query.upper()} IS LIVE CHECKOUT {streamer.stream_link}')
+
                 else:
                     await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
-            
 
         except BaseException as e:
-            print_message('Could not notify about streams\n', e)
+            await print_message('Could not notify about streams\n', e)
     
     @commands.command()
     async def catbot_help(self,ctx):
