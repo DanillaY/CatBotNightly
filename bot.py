@@ -4,7 +4,7 @@ import os
 from discord.ext import commands
 from dotenv import load_dotenv
 from cogs import *
-
+from database.sqlite import radio_sqlite_init
 
 load_dotenv()
 secret = os.getenv('BOT_SECRET')

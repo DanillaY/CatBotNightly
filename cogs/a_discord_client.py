@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 import urllib.request
 
 import discord.ext
-from cogs.b_radio_client import Radio_Client
+from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import compare_twitch_start_stream, does_stremer_db_exist, get_twitch_db_streamers, insert_new_streamer, insert_stream_start_data, twitch_sqlite_init
+from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, twitch_sqlite_init
 from database.streamer import Streamer
 from logger import print_message_async
 
@@ -46,14 +46,14 @@ class Discord_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await print_message_async('Discord cog started working')
+        await print_message_async(message='Discord cog started working',came_from='Discord_Client')
     
     @tasks.loop(minutes=30)
     async def listen_if_bot_unused(self):
-        await print_message_async('Checking for bot unused state')
+        await print_message_async(message='Checking for bot unused state', came_from='Discord_Client')
         
         if self.voice_client != None and self.voice_channel != None:
-            if self.voice_client.is_connected() and len(self.voice_channel.members) == 1:
+            if self.voice_client.is_connected() and (len(self.voice_channel.members) == 1 or self.voice_client.is_playing() == False):
                 await self.voice_client.disconnect(force=True)
                 self.voice_channel = None
                 self.voice_client = None
@@ -61,7 +61,7 @@ class Discord_Client(commands.Cog):
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels(self):
         try:
-            await print_message_async('Sending requests to twitch api (folowed channles)')
+            await print_message_async(message='Sending requests to twitch api (folowed channles)', came_from='Discord_Client')
 
             for streamer in get_twitch_db_streamers():
                 if len(get_twitch_db_streamers()) > 0:
@@ -70,17 +70,17 @@ class Discord_Client(commands.Cog):
                     
                     await send_discord_notification(json_channels,streamer,ch)
         except BaseException as e:
-            await print_message_async('Could not notify about streams\n', e)
+            await print_message_async(message='Could not notify about streams', error=str(e), came_from='Discord_Client')
 
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
         try:
             ch = await self.bot.fetch_channel(channel_id)
             if(len(game_tags) == 1):
-                await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
+                await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating them with commas)')
                 return
 
-            await print_message_async('Sending requests to twitch api (specified game)')
+            await print_message_async(message='Sending requests to twitch api (specified game)', came_from='Discord_Client')
             streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
 
             for stream in streams['data']:
@@ -90,12 +90,12 @@ class Discord_Client(commands.Cog):
                 for tag_stream in game_tags:
                     has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
 
-                    if has_tag and compare_twitch_start_stream(streamer.id,streamer.start_stream) == False:
+                    if has_tag and find_twitch_start_stream_by_id(streamer.id,streamer.start_stream) == False:
                         insert_stream_start_data(stream['started_at'], str(streamer.id))
                         await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
 
         except BaseException as e:
-            await print_message_async('Could not notify about streams\n', e)
+            await print_message_async('Could not notify about streams', error=str(e),came_from='Discord_Client')
     
     @commands.command()
     async def catbot_help(self,ctx):
@@ -119,7 +119,7 @@ class Discord_Client(commands.Cog):
     @commands.command()
     async def cat_pic(self,ctx) -> None:
         urllib.request.urlretrieve('https://cataas.com/cat', 'cats/cat.jpg')
-        await print_message_async('Sending a cat picture')
+        await print_message_async(message='Sending a cat picture',came_from='Discord_Client')
         await ctx.send(file = discord.File('cats/cat.jpg'))
         await ctx.send.add_reaction('🐱')
 
@@ -127,13 +127,13 @@ class Discord_Client(commands.Cog):
     async def cat_fact(self,ctx) -> None:
         data = urllib.request.urlopen('https://catfact.ninja/fact').read()
         json_object = json.loads(data.decode('utf-8'))
-        await print_message_async('Sending a cat fact')
+        await print_message_async(message='Sending a cat fact',came_from='Discord_Client')
         await ctx.send(json_object['fact'])
 
     @commands.command()
     async def status(self,ctx) -> None:
         connection = self.bot.voice_clients
-        await print_message_async('Sending bot status')
+        await print_message_async(message='Sending bot status',came_from='Discord_Client')
         if len(self.bot.voice_clients) == 0:
             await ctx.channel.send('The bot is chilling 😎')
         else:
@@ -145,7 +145,7 @@ class Discord_Client(commands.Cog):
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
 
     async def async_cleanup(self):
-        print_message_async('Closing the bot connection')
+        await print_message_async(message='Closing the bot connection',came_from='Discord_Client')
 
     async def close(self):
         await self.async_cleanup()

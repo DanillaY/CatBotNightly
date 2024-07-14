@@ -6,6 +6,7 @@ import yt_dlp
 from discord.ext import commands
 
 from cogs.a_discord_client import *
+from cogs.c_audio_client import *
 from logger import print_message_async, print_message
 
 '''
@@ -23,15 +24,16 @@ class Youtube_Client(commands.Cog):
         super().__init__()
         self.bot = bot
         self.discord_cog = bot.get_cog('Discord_Client')
+        self.audio_cog = bot.get_cog('Audio_Client')
         self.youtube_queue: list[str] = []
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
         
-        if self.discord_cog == None :
-            print_message('Could not get discord or youtube cog', 'error')
+        if self.discord_cog == None or self.audio_cog == None:
+            print_message('Could not get discord or audio cog', 'error')
             
     @commands.command()
     async def skip_yt(self,ctx):
-        if ctx.author.voice != None or (self.discord_cog.voice_channel != None and self.discord_cog.voice_client != None) or len(self.youtube_queue)>0:
+        if ctx.author.voice != None and (self.discord_cog.voice_channel != None and self.discord_cog.voice_client != None) and len(self.youtube_queue)>0:
             if self.discord_cog.voice_client.is_playing():
                 self.discord_cog.voice_client.stop()
                 await self.yt(self.youtube_queue[0])
@@ -48,7 +50,7 @@ class Youtube_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await print_message_async('Youtube cog started working')
+        await print_message_async(message='Youtube cog started working',came_from='Youtube_Client')
     
     async def play_next_yt(self, ctx):
 
@@ -58,14 +60,14 @@ class Youtube_Client(commands.Cog):
                 await self.yt(ctx, link)
                 self.youtube_queue.pop(0)
             except BaseException as e:
-                await print_message_async('Could not play next song',str(e))
+                await print_message_async(message='Could not play next song',error=str(e), came_from='Youtube_Client')
             
         else:
             await ctx.channel.send('Youtube queue has ended')
-            await self.discord_cog.voice_client.disconnect()
+            await self.audio_cog.stop(ctx)
 
     async def add_to_yt_queue(self,ctx,link):
-        await print_message_async('Added new song to the queue')
+        await print_message_async(message='Added new song to the queue',came_from='Youtube_Client')
         self.youtube_queue.append(link)
 
     @commands.command()
@@ -76,14 +78,14 @@ class Youtube_Client(commands.Cog):
             return
         
         if link == None or link == '':
-            await print_message_async('The link is empty')
+            await print_message_async(message='The link is empty',came_from='Youtube_Client')
             return
 
         try:
             channel: discord.VoiceChannel = ctx.author.voice.channel if self.discord_cog.voice_channel == None else self.discord_cog.voice_channel
             connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
 
-            if self.discord_cog.voice_client.is_playing():
+            if self.discord_cog.voice_client.is_playing() and len(self.youtube_queue) > 0:
                 await self.add_to_yt_queue(ctx,link)
                 await ctx.channel.send('Song was added the queue')
 
@@ -99,7 +101,7 @@ class Youtube_Client(commands.Cog):
                 connection.play(source=audio, after=play_next)
    
         except BaseException as e:
-            await print_message_async(f'Could not play yt video {e}', str(e))
+            await print_message_async(message='Could not play yt video', error=str(e),came_from='Youtube_Client')
             self.discord_cog.voice_channel = None
             self.discord_cog.voice_client = None
             await connection.disconnect(force=True)

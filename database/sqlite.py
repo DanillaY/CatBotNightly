@@ -45,7 +45,7 @@ def get_radio_db_info() -> list:
     tuple_list = _get_all_from_table('radio')
     return list_tuple_to_radio_list(tuple_list)
 
-def compare_twitch_start_stream(streamer_id:str, start_time:str) -> bool:
+def find_twitch_start_stream_by_id(streamer_id:str, start_time:str) -> bool:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
 

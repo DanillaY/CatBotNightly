@@ -16,18 +16,18 @@ class terminal_colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-async def print_message_async(message:str, error:str = '') -> None:
+async def print_message_async(came_from:str,message:str, error:str = '') -> None:
     c = datetime.now()
     time = c.strftime('%H:%M:%S')
     if error != '':
-        print(f'{terminal_colors.FAIL} [{time}] {message}, {error} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.FAIL} [{time} | {came_from}] {message}, {error} {terminal_colors.ENDC}')
     else:
-        print(f'{terminal_colors.OKCYAN} [{time}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.OKCYAN} [{time} | {came_from}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')
 
-def print_message(message:str, error:str = '') -> None:
+def print_message(came_from:str,message:str, error:str = '') -> None:
     c = datetime.now()
     time = c.strftime('%H:%M:%S')
     if error != '':
-        print(f'{terminal_colors.FAIL} [{time}]  {message}, {error} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.FAIL} [{time} | {came_from}]  {message}, {error} {terminal_colors.ENDC}')
     else:
-        print(f'{terminal_colors.OKCYAN} [{time}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.OKCYAN} [{time} | {came_from}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')
