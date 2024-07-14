@@ -13,6 +13,6 @@ def list_tuple_to_radio_list(list: list[tuple]) -> list:
         try:
             result_list.append(Radio(streamer[0],streamer[1],streamer[2]))
         except:
-            print('The list is not in the correct format')
+            print_message('The list is not in the correct format')
             return []
     return result_list

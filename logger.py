@@ -1,7 +1,8 @@
 from datetime import datetime
 
 '''
-	This file should contain functions that are commonly used in the cogs clients
+	This file should contain functions related to logging,
+    by default the message prints out in info style, if you want to print a message in error style set err param to your error
 '''
 
 class terminal_colors:
@@ -15,10 +16,18 @@ class terminal_colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-async def print_message(message:str, error:str = '') -> None:
+async def print_message_async(message:str, error:str = '') -> None:
     c = datetime.now()
     time = c.strftime('%H:%M:%S')
     if error != '':
-        print(f'{terminal_colors.FAIL} [{time}] {message} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.FAIL} [{time}] {message}, {error} {terminal_colors.ENDC}')
     else:
-        print(f'{terminal_colors.OKCYAN} [{time}] {message} {terminal_colors.ENDC}')
+        print(f'{terminal_colors.OKCYAN} [{time}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')
+
+def print_message(message:str, error:str = '') -> None:
+    c = datetime.now()
+    time = c.strftime('%H:%M:%S')
+    if error != '':
+        print(f'{terminal_colors.FAIL} [{time}]  {message}, {error} {terminal_colors.ENDC}')
+    else:
+        print(f'{terminal_colors.OKCYAN} [{time}] {terminal_colors.ENDC} {terminal_colors.OKBLUE} {message} {terminal_colors.ENDC}')

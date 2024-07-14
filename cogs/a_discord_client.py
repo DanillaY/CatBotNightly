@@ -6,20 +6,20 @@ from dotenv import load_dotenv
 import urllib.request
 
 import discord.ext
-from cogs.radio_client import Radio_Client
-from cogs.youtube_client import Youtube_Client
-from cogs.fx_client import Audio_Client
+from cogs.b_radio_client import Radio_Client
+from cogs.b_youtube_client import Youtube_Client
+from cogs.c_audio_client import Audio_Client
 from database.sqlite import get_twitch_db_streamers, insert_stream_start_data, twitch_sqlite_init
 from database.streamer import Streamer
-from logger import print_message
+from logger import print_message_async
 
 '''
     Use this cog to only interact with discord related class,
     dont edit the name of the class,
     dont move any files from cogs folder,
-    this is a cog master, you should get vars like voice_client by self.bot.get_cog('Discord_Client'),
-    dont create new instances of the master fields in other cogs
-    dont name files that starts with the latter a or b in this folder because discord cog should be the first one to load
+    this is a cog master, you should get vars like voice_client by calling connect_bot_to_channel_if_not_other_cog function,
+    dont create new instances of the master fields in other cogs,
+    letters before the client name means the order of which each cog should be load, so if you load some cog in other cog then it means that the parent cog should be above the child cog 
 '''
 
 load_dotenv()
@@ -46,11 +46,11 @@ class Discord_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        await print_message('Discord cog started working')
+        await print_message_async('Discord cog started working')
     
     @tasks.loop(minutes=30)
     async def listen_if_bot_unused(self):
-        await print_message('Checking for bot unused state')
+        await print_message_async('Checking for bot unused state')
         
         if self.voice_client != None and self.voice_channel != None:
             if self.voice_client.is_connected() and len(self.voice_channel.members) == 1:
@@ -61,7 +61,7 @@ class Discord_Client(commands.Cog):
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels(self):
         try:
-            await print_message('Sending requests to twitch api (folowed channles)')
+            await print_message_async('Sending requests to twitch api (folowed channles)')
 
             for streamer in get_twitch_db_streamers():
                 if len(get_twitch_db_streamers()) > 0:
@@ -70,12 +70,12 @@ class Discord_Client(commands.Cog):
                     
                     await send_discord_notification(json_channels,streamer,ch)
         except BaseException as e:
-            await print_message('Could not notify about streams\n', e)
+            await print_message_async('Could not notify about streams\n', e)
 
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
         try:
-            await print_message('Sending requests to twitch api (specified game)')
+            await print_message_async('Sending requests to twitch api (specified game)')
             ch = await self.bot.fetch_channel(channel_id)
             
             streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
@@ -92,7 +92,7 @@ class Discord_Client(commands.Cog):
                     await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
 
         except BaseException as e:
-            await print_message('Could not notify about streams\n', e)
+            await print_message_async('Could not notify about streams\n', e)
     
     @commands.command()
     async def catbot_help(self,ctx):
@@ -115,7 +115,7 @@ class Discord_Client(commands.Cog):
     @commands.command()
     async def cat_pic(self,ctx) -> None:
         urllib.request.urlretrieve('https://cataas.com/cat', 'cats/cat.jpg')
-        await print_message('Sending a cat picture')
+        await print_message_async('Sending a cat picture')
         await ctx.send(file = discord.File('cats/cat.jpg'))
         await ctx.send.add_reaction('🐱')
 
@@ -123,13 +123,13 @@ class Discord_Client(commands.Cog):
     async def cat_fact(self,ctx) -> None:
         data = urllib.request.urlopen('https://catfact.ninja/fact').read()
         json_object = json.loads(data.decode('utf-8'))
-        await print_message('Sending a cat fact')
+        await print_message_async('Sending a cat fact')
         await ctx.send(json_object['fact'])
 
     @commands.command()
     async def status(self,ctx) -> None:
         connection = self.bot.voice_clients
-        await print_message('Sending bot status')
+        await print_message_async('Sending bot status')
         if len(self.bot.voice_clients) == 0:
             await ctx.channel.send('The bot is chilling 😎')
         else:
@@ -141,7 +141,7 @@ class Discord_Client(commands.Cog):
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
 
     async def async_cleanup(self):
-        print_message('Closing the bot connection')
+        print_message_async('Closing the bot connection')
 
     async def close(self):
         await self.async_cleanup()
