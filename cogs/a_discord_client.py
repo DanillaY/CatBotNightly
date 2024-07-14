@@ -72,17 +72,15 @@ class Discord_Client(commands.Cog):
         except BaseException as e:
             await print_message_async('Could not notify about streams\n', e)
 
-    @tasks.loop(seconds=20)
+    @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
         try:
-            print(len(game_tags))
+            ch = await self.bot.fetch_channel(channel_id)
             if(len(game_tags) == 1):
                 await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
                 return
 
             await print_message_async('Sending requests to twitch api (specified game)')
-            ch = await self.bot.fetch_channel(channel_id)
-            
             streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
 
             for stream in streams['data']:
@@ -95,7 +93,6 @@ class Discord_Client(commands.Cog):
                     if has_tag and compare_twitch_start_stream(streamer.id,streamer.start_stream) == False:
                         insert_stream_start_data(stream['started_at'], str(streamer.id))
                         await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
-
 
         except BaseException as e:
             await print_message_async('Could not notify about streams\n', e)
@@ -115,7 +112,7 @@ class Discord_Client(commands.Cog):
         '!pause - this command will pause whatever song is playing right now\n\n'\
         '!resume - this command will resume the paused song\n\n'\
         '!status - this command will show current status of the bot\n\n'\
-        '!queue - this command will show the queue of the youtube voideos\n\n'\
+        '!queue - this command will show the queue of the youtube videos\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 

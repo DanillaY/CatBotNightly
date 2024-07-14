@@ -8,6 +8,7 @@ from requests import get
 
 from database.radio import Radio, list_tuple_to_radio_list
 from database.streamer import Streamer, list_tuple_to_streamer_list
+from logger import print_message
 
 def twitch_sqlite_init() -> None:
     connection = sqlite3.connect('twitch.db')
@@ -79,7 +80,7 @@ def get_radios_by_country(country:str) -> list[Radio]:
     try:
         tuple_list = _get_all_from_table(db='radio', where='LOWER(Country) =='+str.lower("'"+country+"'"))
     except BaseException as e:
-        print(e)
+        print_message('Error while getting coutries from database',e)
     return list_tuple_to_radio_list(tuple_list)
 
 #use this method only in this file
