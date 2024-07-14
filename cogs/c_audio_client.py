@@ -3,7 +3,6 @@ import discord
 from discord.ext import commands
 
 from cogs.a_discord_client import *
-from cogs.b_youtube_client import *
 from logger import print_message, print_message_async
 
 '''
@@ -20,11 +19,7 @@ class Audio_Client(commands.Cog):
         super().__init__()
         self.bot = bot
         self.discord_cog = bot.get_cog('Discord_Client')
-        self.youtube_cog =  bot.get_cog('Youtube_Client')
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
-        
-        if self.discord_cog == None or self.youtube_cog == None:
-            print_message('Could not get discord or youtube cog', 'error')
 
     @commands.command()
     async def stop(self,ctx) -> None:
@@ -56,15 +51,6 @@ class Audio_Client(commands.Cog):
            connection.resume()
         else:
             await ctx.channel.send('Cant resume current song')
-    
-    @commands.command()
-    async def skip_yt(self,ctx):
-        if ctx.author.voice != None or (self.discord_cog.voice_channel != None and self.discord_cog.voice_client != None) or len(self.youtube_cog.youtube_queue)>0:
-            if self.discord_cog.voice_client.is_playing():
-                self.discord_cog.voice_client.stop()
-                await self.youtube_cog.yt(ctx,self.youtube_queue[0])
-        else:
-            await ctx.channel.send('Could not skip the song')
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Audio_Client(client))
