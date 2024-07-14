@@ -5,6 +5,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from cogs import *
 
+
 load_dotenv()
 secret = os.getenv('BOT_SECRET')
 ban_words = os.getenv('BANNED_WORDS').split(',')

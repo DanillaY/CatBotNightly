@@ -9,7 +9,7 @@ import discord.ext
 from cogs.b_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import get_twitch_db_streamers, insert_stream_start_data, twitch_sqlite_init
+from database.sqlite import compare_twitch_start_stream, does_stremer_db_exist, get_twitch_db_streamers, insert_new_streamer, insert_stream_start_data, twitch_sqlite_init
 from database.streamer import Streamer
 from logger import print_message_async
 
@@ -36,8 +36,8 @@ class Discord_Client(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         twitch_sqlite_init()
-        #self.listen_for_twitch_channels.start()
-        self.listen_for_twitch_channels_specific.start()
+        self.listen_for_twitch_channels.start()
+        self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified to your twitch database
         self.listen_if_bot_unused.start()
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
@@ -72,24 +72,30 @@ class Discord_Client(commands.Cog):
         except BaseException as e:
             await print_message_async('Could not notify about streams\n', e)
 
-    @tasks.loop(minutes=20)
+    @tasks.loop(seconds=20)
     async def listen_for_twitch_channels_specific(self):
         try:
+            print(len(game_tags))
+            if(len(game_tags) == 1):
+                await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
+                return
+
             await print_message_async('Sending requests to twitch api (specified game)')
             ch = await self.bot.fetch_channel(channel_id)
             
             streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
+
             for stream in streams['data']:
                 streamer = Streamer(stream['user_id'],stream['user_login'],'https://www.twitch.tv/'+stream['user_login'],stream['started_at'])
+                list(map(lambda x: x.lower(), stream['tags']))
 
-                if(len(game_tags) > 0):
-                    list(map(lambda x: x.lower(), stream['tags']))
-                    for tag_stream in game_tags:
-                        if (str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])):
-                            await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE NOW! \nCHECKOUT {streamer.stream_link}')
+                for tag_stream in game_tags:
+                    has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
 
-                else:
-                    await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
+                    if has_tag and compare_twitch_start_stream(streamer.id,streamer.start_stream) == False:
+                        insert_stream_start_data(stream['started_at'], str(streamer.id))
+                        await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
+
 
         except BaseException as e:
             await print_message_async('Could not notify about streams\n', e)
@@ -151,10 +157,10 @@ class Discord_Client(commands.Cog):
 async def send_discord_notification(json_channels,streamer: Streamer,channel) -> None:
     for channels in json_channels['data']:
         #check if it is not the same stream
-
-        if channels['id'] == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
+        if str(channels['id']) == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
             insert_stream_start_data(channels['started_at'], str(streamer.id))
-            await channel.send(f'@here YOOO {streamer.query.upper()} IS LIVE CHECKOUT {streamer.stream_link}')
+            await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
+
 
 def make_api_call_twitch(link) -> dict:
     req = urllib.request.Request(link)

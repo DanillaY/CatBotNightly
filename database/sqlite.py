@@ -7,7 +7,7 @@ import pandas as pd
 from requests import get
 
 from database.radio import Radio, list_tuple_to_radio_list
-from database.streamer import list_tuple_to_streamer_list
+from database.streamer import Streamer, list_tuple_to_streamer_list
 
 def twitch_sqlite_init() -> None:
     connection = sqlite3.connect('twitch.db')
@@ -19,7 +19,14 @@ def twitch_sqlite_init() -> None:
     cursor.executescript(sql_script)
     connection.commit()
     connection.close()
-    
+
+def insert_new_streamer(streamer:Streamer):
+    connection = sqlite3.connect('twitch.db')
+    cursor = connection.cursor()
+    cursor.execute('INSERT OR REPLACE INTO twitch VALUES(?,?,?,?)',(streamer.id,streamer.query,streamer.stream_link,streamer.start_stream))
+
+    connection.commit()
+    connection.close()
 
 def insert_stream_start_data(start_stream, id) -> None:
     connection = sqlite3.connect('twitch.db')
@@ -37,13 +44,32 @@ def get_radio_db_info() -> list:
     tuple_list = _get_all_from_table('radio')
     return list_tuple_to_radio_list(tuple_list)
 
+def compare_twitch_start_stream(streamer_id:str, start_time:str) -> bool:
+    connection = sqlite3.connect('twitch.db')
+    cursor = connection.cursor()
+
+    cursor.execute('SELECT COUNT(ID) FROM twitch WHERE ID == ? AND start_stream == ?',(streamer_id, start_time,))
+    id_count = cursor.fetchone()[0]
+    connection.close()
+    return id_count > 0
+
+def does_stremer_db_exist(streamer_id:str) -> bool:
+    connection = sqlite3.connect('twitch.db')
+    cursor = connection.cursor()
+
+    cursor.execute('SELECT COUNT(ID) FROM twitch WHERE ID == ?',(streamer_id,))
+    id_count = cursor.fetchone()[0]
+    connection.close()
+    return id_count > 0
+
 def does_radio_db_exist(radio_id:str) -> bool:
     connection = sqlite3.connect('radio.db')
     cursor = connection.cursor()
 
-    radios = cursor.execute('SELECT * FROM radio WHERE ID == ?',radio_id)
+    cursor.execute('SELECT COUNT(ID) FROM radio WHERE ID == ?',(radio_id,))
+    id_count = cursor.fetchone()[0]
     connection.close()
-    return len(radios) > 0
+    return id_count > 0
 
 def get_random_radio() -> Radio:
     radio: Radio = random.choice(get_radio_db_info())
