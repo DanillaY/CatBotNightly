@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 
 from cogs.a_discord_client import *
+from cogs.b_youtube_client import *
 from logger import print_message, print_message_async
 
 '''
@@ -19,6 +20,7 @@ class Audio_Client(commands.Cog):
         super().__init__()
         self.bot = bot
         self.discord_cog = bot.get_cog('Discord_Client')
+        self.youtube_cog = bot.get_cog('Youtube_Client')
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
 
     @commands.command()
@@ -31,7 +33,7 @@ class Audio_Client(commands.Cog):
            await print_message_async('Bot is stopped')
            self.discord_cog.voice_channel = None
            self.discord_cog.voice_client = None
-           self.youtube_queue.clear()
+           self.youtube_cog.youtube_queue.clear()
         else:
             await ctx.channel.send('This song is unstoppable')
 

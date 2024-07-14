@@ -86,7 +86,7 @@ class Discord_Client(commands.Cog):
                     list(map(lambda x: x.lower(), stream['tags']))
                     for tag_stream in game_tags:
                         if (str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])):
-                            await ch.send(f'@here YOOO {streamer.query.upper()} IS LIVE CHECKOUT {streamer.stream_link}')
+                            await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE NOW! \nCHECKOUT {streamer.stream_link}')
 
                 else:
                     await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating tags with commas)')
@@ -109,6 +109,7 @@ class Discord_Client(commands.Cog):
         '!pause - this command will pause whatever song is playing right now\n\n'\
         '!resume - this command will resume the paused song\n\n'\
         '!status - this command will show current status of the bot\n\n'\
+        '!queue - this command will show the queue of the youtube voideos\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 

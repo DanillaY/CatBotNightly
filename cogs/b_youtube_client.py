@@ -37,7 +37,15 @@ class Youtube_Client(commands.Cog):
                 await self.yt(self.youtube_queue[0])
         else:
             await ctx.channel.send('Could not skip the song')
-            
+
+    @commands.command()
+    async def queue(self,ctx):
+        video_counter = len(self.youtube_queue)
+        if video_counter > 0:
+            await ctx.send(f'Right now {video_counter} videos are in the queue')
+        else:
+            await ctx.send(f'Thers no videos in the queue')
+
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await print_message_async('Youtube cog started working')
