@@ -24,7 +24,7 @@ class Audio_Client(commands.Cog):
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
         
         if self.discord_cog == None or self.youtube_cog == None :
-            print_message('Could not get discord or youtube cog)', 'error')
+            print_message(message='Could not get discord or youtube cog)',error='error',came_from='Audio_Client')
 
     @commands.command()
     async def stop(self,ctx) -> None:

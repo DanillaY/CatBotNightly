@@ -26,13 +26,13 @@ class Radio_Client(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         self.bot = bot
-        self.discord_cog = bot.get_cog('Discord_Client')
-        self.youtube_cog = bot.get_cog('Youtube_Client')
-        self.audio_cog = bot.get_cog('Audio_Client')
+        self.discord_cog: discord.Cog = bot.get_cog('Discord_Client')
+        self.youtube_cog: discord.Cog = bot.get_cog('Youtube_Client')
+        self.audio_cog: discord.Cog = bot.get_cog('Audio_Client')
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
         
         if self.discord_cog == None or self.youtube_cog == None:
-            print_message('Could not get discord or youtube cog', 'error')
+            print_message(message='Could not get discord or youtube cog', error='error', came_from='Radio_Client')
     
     #shows first few records of radios in database (because of the 2000 chars limit per message)
     @commands.command()
@@ -75,14 +75,22 @@ class Radio_Client(commands.Cog):
     @commands.command()
     async def radio_random(self,ctx) -> None:
         try:
-            if ctx.author.voice != None and len(self.youtube_cog.youtube_queue) == 0:
+            if ctx.author.voice != None and self.discord_cog.yt_playing == False:
                 radio:Radio = get_random_radio()
                 await play_radio(self,ctx,radio.id)
                 await ctx.channel.send(f'Right now playing {radio.title}, country {radio.country}, id {radio.id}')
+            elif self.discord_cog.yt_playing == True:
+                await ctx.channel.send('Bot is streaming a radiostation, use !stop to play yt links')
             else:
-                await ctx.channel.send('You should be in the voice channel to use that command')
+                await ctx.channel.send('You are not in the voice channel or the bot playing radiostation, use !stop to play yt links')
         except BaseException as e:
             await print_message_async(message='Error while starting new radio', error=str(e),came_from='Radio_Client')
+    
+    async def set_radio_playing_status(self,ctx,status:bool) -> None:
+        if(self.discord_cog != None):
+            self.discord_cog.radio_playing = status
+        else:
+            await print_message_async(message='Cant set the radio playing status',error='discord cog is empty',came_from='Radio_Client')
     
 async def play_radio(self:Radio_Client,ctx,radio_id) -> None:
 
@@ -90,13 +98,14 @@ async def play_radio(self:Radio_Client,ctx,radio_id) -> None:
         channel: discord.VoiceChannel = ctx.author.voice.channel
         connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
 
-        if connection.is_playing() == False:
+        if connection.is_playing() == False and self.discord_cog.yt_playing == False:
             with yt_dlp.YoutubeDL() as ydl:
                 info = ydl.extract_info(f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3', download=False)
                 URL = info['formats'][0]['url']
 
                 audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL, **self.FFMPEG_OPTIONS)
-                connection.play(audio)
+                connection.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False), self.bot.loop))
+                await self.set_radio_playing_status(ctx,True)
     except BaseException as e:
         await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
         await ctx.send('Could not stream that radio. Sorry :(')

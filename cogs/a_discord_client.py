@@ -19,7 +19,8 @@ from logger import print_message_async
     dont move any files from cogs folder,
     this is a cog master, you should get vars like voice_client by calling connect_bot_to_channel_if_not_other_cog function,
     dont create new instances of the master fields in other cogs,
-    letters before the client name means the order of which each cog should be load, so if you load some cog in other cog then it means that the parent cog should be above the child cog 
+    letters before the client name means the order of which each cog should be load, so if you load some cog in other cog then it means that the parent cog should be above the child cog, 
+    cogs should not reference each other because one of them wont be able to load
 '''
 
 load_dotenv()
@@ -39,6 +40,8 @@ class Discord_Client(commands.Cog):
         self.listen_for_twitch_channels.start()
         self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified to your twitch database
         self.listen_if_bot_unused.start()
+        self.radio_playing: bool = False
+        self.yt_playing: bool = False
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
         self.voice_channel:discord.VoiceChannel = None
@@ -68,7 +71,7 @@ class Discord_Client(commands.Cog):
                     json_channels = make_api_call_twitch('https://api.twitch.tv/helix/search/channels?live_only=true&query='+streamer.query)   
                     ch = await self.bot.fetch_channel(channel_id)
                     
-                    await send_discord_notification(json_channels,streamer,ch)
+                    await send_discord_notification_search_request(json_channels,streamer,ch)
         except BaseException as e:
             await print_message_async(message='Could not notify about streams', error=str(e), came_from='Discord_Client')
 
@@ -86,13 +89,8 @@ class Discord_Client(commands.Cog):
             for stream in streams['data']:
                 streamer = Streamer(stream['user_id'],stream['user_login'],'https://www.twitch.tv/'+stream['user_login'],stream['started_at'])
                 list(map(lambda x: x.lower(), stream['tags']))
-
-                for tag_stream in game_tags:
-                    has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
-
-                    if has_tag and find_twitch_start_stream_by_id(streamer.id,streamer.start_stream) == False:
-                        insert_stream_start_data(stream['started_at'], str(streamer.id))
-                        await ch.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
+                await send_discord_notification_helix_request(stream,streamer)
+                
 
         except BaseException as e:
             await print_message_async('Could not notify about streams', error=str(e),came_from='Discord_Client')
@@ -132,16 +130,20 @@ class Discord_Client(commands.Cog):
 
     @commands.command()
     async def status(self,ctx) -> None:
-        connection = self.bot.voice_clients
+        channel: discord.VoiceChannel = ctx.author.voice.channel if self.voice_channel == None else self.voice_channel
+        connection = await _connect_bot_to_channel_if_not(self,channel)
+        
         await print_message_async(message='Sending bot status',came_from='Discord_Client')
         if len(self.bot.voice_clients) == 0:
             await ctx.channel.send('The bot is chilling 😎')
         else:
-            if connection[0].is_paused():
+            if connection.is_paused():
                 await ctx.channel.send('The bot is paused')
-            elif connection[0].is_playing():
-                await ctx.channel.send('The bot is playing music')
-            elif connection[0].is_connected():
+            elif self.yt_playing == True:
+                await ctx.channel.send('The bot is playing youtube videos')
+            elif self.radio_playing == True:
+                await ctx.channel.send('The bot is playing music from radio')
+            elif connection.is_connected():
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
 
     async def async_cleanup(self):
@@ -151,11 +153,19 @@ class Discord_Client(commands.Cog):
         await self.async_cleanup()
         await super().close()
 
-async def send_discord_notification(json_channels,streamer: Streamer,channel) -> None:
+async def send_discord_notification_search_request(json_channels,streamer: Streamer,channel) -> None:
     for channels in json_channels['data']:
         #check if it is not the same stream
         if str(channels['id']) == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
             insert_stream_start_data(channels['started_at'], str(streamer.id))
+            await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
+            
+async def send_discord_notification_helix_request(stream:str, streamer:Streamer, channel: discord.VoiceChannel) -> None:
+    for tag_stream in game_tags:
+        has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
+
+        if has_tag and find_twitch_start_stream_by_id(streamer.id,streamer.start_stream) == False:
+            insert_stream_start_data(stream['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
 
 
