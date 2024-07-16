@@ -47,7 +47,7 @@ class Radio_Client(commands.Cog):
     
     @commands.command()
     async def radio(self,ctx, radio_id) -> None:
-        if ctx.author.voice != None and len(self.youtube_cog.youtube_queue) == 0 and self.discord_cog.radio_playing == False:
+        if ctx.author.voice != None and len(self.discord_cog.youtube_queue) == 0 and self.discord_cog.radio_playing == False:
             await play_radio(self,ctx,f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3','radio')
         elif does_radio_db_exist(radio_id) == False:
             await ctx.channel.send('Radio with that id does not exist')
@@ -59,7 +59,7 @@ class Radio_Client(commands.Cog):
     @commands.command()
     async def jsr(self,ctx):
         try:
-            if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False or self.discord_cog.voice_client == None:            
+            if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False:            
                 radio:Radio_JSR = get_random_radio_jsr()
                 self.discord_cog.radio_jsr_playing = True
 
@@ -109,34 +109,38 @@ class Radio_Client(commands.Cog):
             await print_message_async(message='Error while starting new radio', error=str(e),came_from='Radio_Client')
     
     async def set_radio_playing_status(self,ctx,status:bool,field_specified:str) -> None:
+
         if self.discord_cog != None and field_specified == 'radio':
             self.discord_cog.radio_playing = status
 
         elif self.discord_cog != None and field_specified == 'radio_jsr':
 
             self.discord_cog.radio_jsr_playing = status
-            if status == False:
-                asyncio.run_coroutine_threadsafe(self.jsr(ctx),self.bot.loop)
+            if status == False and self.discord_cog.voice_client != None and self.discord_cog.voice_channel != None and ctx != None:
+                asyncio.run_coroutine_threadsafe(self.jsr(ctx), self.bot.loop)
         else:
             await print_message_async(message='Cant set the radio playing status',error='discord cog is empty',came_from='Radio_Client')
 
-async def play_radio(self:Radio_Client,ctx,link:str, calling_from:str) -> None:
+async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str) -> None:
+
     if link == '' or link == None:
-        await print_message_async(message='The link is empty',came_from='Radio_Client')
+        await print_message_async(message='The link is empty',came_from='Radio_Client', error='error')
+        return
+    
     try:
         channel: discord.VoiceChannel = ctx.author.voice.channel
         connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
 
-        if connection.is_playing() == False and self.discord_cog.yt_playing == False:
+        if connection.is_playing() == False and self.discord_cog.yt_playing == False and self.discord_cog.voice_client != None:
             with yt_dlp.YoutubeDL() as ydl:
                 info = ydl.extract_info(link, download=False)
                 URL = info['formats'][0]['url']
 
                 audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL, **self.FFMPEG_OPTIONS)
-                connection.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False,calling_from), self.bot.loop))
+                connection.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False,field_specified), self.bot.loop))
 
                 await print_message_async(message='Started playing radio',came_from='Radio_Client')
-                await self.set_radio_playing_status(ctx,True,calling_from)
+                await self.set_radio_playing_status(ctx,True,field_specified)
     except BaseException as e:
         await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
         await ctx.send('Could not stream that radio. Sorry :(')

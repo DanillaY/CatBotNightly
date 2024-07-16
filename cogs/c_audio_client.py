@@ -31,14 +31,14 @@ class Audio_Client(commands.Cog):
             connection: discord.VoiceClient = self.discord_cog.voice_client
             
             if ctx.author.voice != None and connection != None:
-                self.discord_cog.radio_jsr_playing = False
-                self.discord_cog.yt_playing = False
-                self.discord_cog.radio_playing = False
-                self.discord_cog.youtube_queue.clear()
                 await connection.disconnect(force=True)
                 await print_message_async(message='Bot is stopped',came_from='Audio_Client')
                 self.discord_cog.voice_channel = None
                 self.discord_cog.voice_client = None
+                self.discord_cog.radio_jsr_playing = False
+                self.discord_cog.yt_playing = False
+                self.discord_cog.radio_playing = False
+                self.discord_cog.youtube_queue.clear()
             else:
                 await ctx.channel.send('Could not get voice channel connection')
         except BaseException as e:

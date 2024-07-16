@@ -1,5 +1,6 @@
 twitch.db
 radio.db
+get_set_radio.db
 .env
 __pycache__/
 cogs/__pycache__/

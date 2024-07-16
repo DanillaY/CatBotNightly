@@ -88,7 +88,7 @@ class Youtube_Client(commands.Cog):
             await print_message_async(message='The link is empty',came_from='Youtube_Client')
             return
         
-        if self.discord_cog.radio_playing == False or self.discord_cog.radio_jsr_playing == False:
+        if self.discord_cog.radio_playing == True or self.discord_cog.radio_jsr_playing == True:
             await ctx.channel.send('Cant play youtube video while radio is playing, please use !stop to stop streaming radio and try again')
             return
 
