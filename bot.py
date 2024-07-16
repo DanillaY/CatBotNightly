@@ -1,8 +1,10 @@
 import asyncio
+import json
 import discord
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
+import yt_dlp
 from cogs import *
 from database.sqlite import radio_sqlite_init
 
@@ -28,4 +30,4 @@ async def main():
 
 asyncio.run(main())
 
-#asyncio.run(radio_sqlite_init()) initialize radio db once so that you wont get block on their api
+#asyncio.run(radio_sqlite_init()) update radio database every week

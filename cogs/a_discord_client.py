@@ -9,7 +9,7 @@ import discord.ext
 from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, twitch_sqlite_init
+from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, database_sqlite_init
 from database.streamer import Streamer
 from logger import print_message_async
 
@@ -36,16 +36,19 @@ class Discord_Client(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         super().__init__()
-        twitch_sqlite_init()
+        database_sqlite_init('twitch')
+        database_sqlite_init('jet_set_radio')
         self.listen_for_twitch_channels.start()
-        self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified to your twitch database
+        self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified in your twitch database
         self.listen_if_bot_unused.start()
+        self.radio_jsr_playing: bool = False
         self.radio_playing: bool = False
         self.yt_playing: bool = False
+        self.youtube_queue : list[str] = None
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
         self.voice_channel:discord.VoiceChannel = None
-        self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options': '-vn -filter:a "volume=0.5"'}
+        self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 15','options': '-vn -filter:a "volume=0.5"'}
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -57,9 +60,13 @@ class Discord_Client(commands.Cog):
         
         if self.voice_client != None and self.voice_channel != None:
             if self.voice_client.is_connected() and (len(self.voice_channel.members) == 1 or self.voice_client.is_playing() == False):
-                await self.voice_client.disconnect(force=True)
                 self.voice_channel = None
                 self.voice_client = None
+                self.yt_playing = False
+                self.radio_jsr_playing = False
+                self.radio_playing = False
+                self.youtube_queue = None
+                await self.voice_client.disconnect(force=True)
     
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels(self):
@@ -111,6 +118,7 @@ class Discord_Client(commands.Cog):
         '!resume - this command will resume the paused song\n\n'\
         '!status - this command will show current status of the bot\n\n'\
         '!queue - this command will show the queue of the youtube videos\n\n'\
+        '!jsr - this command will stream random music from JetSetRadio.live "Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 
@@ -130,17 +138,18 @@ class Discord_Client(commands.Cog):
 
     @commands.command()
     async def status(self,ctx) -> None:
-        channel: discord.VoiceChannel = ctx.author.voice.channel if self.voice_channel == None else self.voice_channel
-        connection = await _connect_bot_to_channel_if_not(self,channel)
+        connection = self.voice_client
         
         await print_message_async(message='Sending bot status',came_from='Discord_Client')
-        if len(self.bot.voice_clients) == 0:
+        if connection == None:
             await ctx.channel.send('The bot is chilling 😎')
         else:
             if connection.is_paused():
                 await ctx.channel.send('The bot is paused')
             elif self.yt_playing == True:
                 await ctx.channel.send('The bot is playing youtube videos')
+            elif self.radio_jsr_playing == True:
+                await ctx.channel.send('The bot is playing music from JetSetRadio.live')
             elif self.radio_playing == True:
                 await ctx.channel.send('The bot is playing music from radio')
             elif connection.is_connected():
@@ -168,7 +177,6 @@ async def send_discord_notification_helix_request(stream:str, streamer:Streamer,
             insert_stream_start_data(stream['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
 
-
 def make_api_call_twitch(link) -> dict:
     req = urllib.request.Request(link)
     req.add_header('Authorization', twitch_access)
@@ -176,16 +184,6 @@ def make_api_call_twitch(link) -> dict:
                     
     content = urllib.request.urlopen(req).read()
     return json.loads(content)
-
-#use this method only in discord client
-async def _connect_bot_to_channel_if_not(self:Discord_Client,channel:discord.VoiceChannel) -> discord.VoiceClient:
-    if self.voice_client == None or self.voice_channel == None:
-        connection = await channel.connect()
-        self.voice_client = connection
-        self.voice_channel = channel
-        return connection
-    else:
-        return self.voice_client
 
 #use this method to access vc and channel from other cogs
 async def connect_bot_to_channel_if_not_other_cog(self: Radio_Client | Youtube_Client | Audio_Client, channel:discord.VoiceChannel) -> discord.VoiceClient:

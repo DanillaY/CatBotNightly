@@ -7,14 +7,15 @@ import pandas as pd
 from requests import get
 
 from database.radio import Radio, list_tuple_to_radio_list
+from database.radio_jsr import Radio_JSR, list_tuple_to_radio_jsr_list
 from database.streamer import Streamer, list_tuple_to_streamer_list
 from logger import print_message
 
-def twitch_sqlite_init() -> None:
-    connection = sqlite3.connect('twitch.db')
+def database_sqlite_init(database_name:str) -> None:
+    connection = sqlite3.connect(f'{database_name}.db')
     cursor = connection.cursor()
 
-    with open('./database/twitch.sql', 'r') as sql_file:
+    with open(f'./database/{database_name}.sql', 'r') as sql_file:
         sql_script = sql_file.read()
 
     cursor.executescript(sql_script)
@@ -45,6 +46,10 @@ def get_radio_db_info() -> list:
     tuple_list = _get_all_from_table('radio')
     return list_tuple_to_radio_list(tuple_list)
 
+def get_radio_jsr_db_info() -> list:
+    tuple_list = _get_all_from_table('jet_set_radio')
+    return list_tuple_to_radio_jsr_list(tuple_list)
+
 def find_twitch_start_stream_by_id(streamer_id:str, start_time:str) -> bool:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
@@ -74,6 +79,10 @@ def does_radio_db_exist(radio_id:str) -> bool:
 
 def get_random_radio() -> Radio:
     radio: Radio = random.choice(get_radio_db_info())
+    return radio
+
+def get_random_radio_jsr() -> Radio_JSR:
+    radio: Radio_JSR = random.choice(get_radio_jsr_db_info())
     return radio
 
 def get_radios_by_country(country:str) -> list[Radio]:
@@ -114,6 +123,6 @@ async def radio_sqlite_init():
             db_title_place = data['page']['title']
 
             cursor.execute('INSERT OR REPLACE INTO radio VALUES(?, ?, ?, ?)', (db_radio_id, db_title_place,db_place_country,db_id_place))
-            await asyncio.sleep(randint(2,4))
+            await asyncio.sleep(randint(1,3))
             connection.commit()
     connection.close()
