@@ -34,7 +34,7 @@ class Audio_Client(commands.Cog):
                 self.discord_cog.radio_jsr_playing = False
                 self.discord_cog.yt_playing = False
                 self.discord_cog.radio_playing = False
-                self.youtube_cog.youtube_queue.clear()
+                self.discord_cog.youtube_queue.clear()
                 await connection.disconnect(force=True)
                 await print_message_async(message='Bot is stopped',came_from='Audio_Client')
                 self.discord_cog.voice_channel = None

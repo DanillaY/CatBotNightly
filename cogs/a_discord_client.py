@@ -44,7 +44,7 @@ class Discord_Client(commands.Cog):
         self.radio_jsr_playing: bool = False
         self.radio_playing: bool = False
         self.yt_playing: bool = False
-        self.youtube_queue : list[str] = None
+        self.youtube_queue: list[str] = []
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
         self.voice_channel:discord.VoiceChannel = None
@@ -114,11 +114,11 @@ class Discord_Client(commands.Cog):
         '!radio_search_by_country - accepts country name and shows available radiostations 🏴 (example: !radio_search_by_country united kingdom)\n\n'\
         '!radio_random - this command will play a random radiostation from the world 🌍\n\n'\
         '!stop - this command will force the bot to leave the voice channel even if he is playing (please use this command after you are done using the bot) ⛔\n\n'\
-        '!pause - this command will pause whatever song is playing right now\n\n'\
-        '!resume - this command will resume the paused song\n\n'\
-        '!status - this command will show current status of the bot\n\n'\
-        '!queue - this command will show the queue of the youtube videos\n\n'\
-        '!jsr - this command will stream random music from JetSetRadio.live "Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"'\
+        '!pause - this command will pause whatever song is playing right now ⏸️\n\n'\
+        '!resume - this command will resume the paused song 🔹\n\n'\
+        '!status - this command will show current status of the bot🔥\n\n'\
+        '!queue - this command will show the queue of the youtube videos🎼\n\n'\
+        '!jsr - this command will stream random music from JetSetRadio.live🎉 "Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 

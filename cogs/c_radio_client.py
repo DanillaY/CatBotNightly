@@ -51,6 +51,8 @@ class Radio_Client(commands.Cog):
             await play_radio(self,ctx,f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3','radio')
         elif does_radio_db_exist(radio_id) == False:
             await ctx.channel.send('Radio with that id does not exist')
+        elif self.discord_cog.radio_playing != False:
+            await ctx.channel.send('Another radiostation is already playing, please use !stop')
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
 
@@ -102,7 +104,7 @@ class Radio_Client(commands.Cog):
                 await ctx.channel.send('Bot is playing a youtube queue, use !stop and !radio_random or !radio to play radiostations')
                 
             else:
-                await ctx.channel.send('You are not in the voice channel or the bot playing radiostation, use !stop to play yt links')
+                await ctx.channel.send('You are not in the voice channel or the bot playing radiostation, use !stop to play yt links or a radiostation')
         except BaseException as e:
             await print_message_async(message='Error while starting new radio', error=str(e),came_from='Radio_Client')
     
@@ -111,6 +113,7 @@ class Radio_Client(commands.Cog):
             self.discord_cog.radio_playing = status
 
         elif self.discord_cog != None and field_specified == 'radio_jsr':
+
             self.discord_cog.radio_jsr_playing = status
             if status == False:
                 asyncio.run_coroutine_threadsafe(self.jsr(ctx),self.bot.loop)
