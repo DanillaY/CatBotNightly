@@ -92,6 +92,27 @@ def get_radios_by_country(country:str) -> list[Radio]:
         print_message('Error while getting coutries from database',e)
     return list_tuple_to_radio_list(tuple_list)
 
+def get_radios_jsr_by_station(station:str) -> list[Radio_JSR]:
+    try:
+        radio_jsr_music = _get_all_from_table(db='jet_set_radio', where='LOWER(Station) =='+str.lower("'"+station+"'"))
+    except BaseException as e:
+        print_message('Error while getting music from station database',e)
+    return list_tuple_to_radio_jsr_list(radio_jsr_music)
+
+def get_stations_jsr() -> tuple[str]:
+    try:
+        connection = sqlite3.connect('jet_set_radio.db')
+        cursor = connection.cursor()
+        cursor.execute('SELECT DISTINCT Station FROM jet_set_radio')
+
+        tuple_stations = cursor.fetchall()
+        connection.close()
+
+    except BaseException as e:
+        print_message('Error while radio stations from database',e)
+        tuple_stations = ()
+    return tuple_stations
+
 #use this method only in this file
 def _get_all_from_table(db, where = ''):
     connection = sqlite3.connect(db+'.db')

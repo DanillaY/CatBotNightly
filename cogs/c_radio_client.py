@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import random
 
 import discord
 import yt_dlp
@@ -10,7 +11,7 @@ from database.radio import Radio
 from discord.ext import commands
 
 from database.radio_jsr import Radio_JSR
-from database.sqlite import does_radio_db_exist, get_radio_db_info, get_radios_by_country, get_random_radio, get_random_radio_jsr
+from database.sqlite import does_radio_db_exist, get_radio_db_info, get_radios_by_country, get_radios_jsr_by_station, get_random_radio, get_random_radio_jsr, get_stations_jsr
 from logger import print_message, print_message_async
 
 '''
@@ -31,6 +32,15 @@ class Radio_Client(commands.Cog):
         self.youtube_cog: discord.Cog = bot.get_cog('Youtube_Client')
         self.audio_cog: discord.Cog = bot.get_cog('Audio_Client')
         self.FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 15','options': '-vn -filter:a "volume=0.5"'}
+        #list of radio transitions before the song, dont store that in the database
+        self.bumps:tuple[str] = ('https://jetsetradio.live/radio/stations/bumps/bump2.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/bump3.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/DJK1.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/DJK2.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/Donkey%20Kong%20Bumper.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/Jet%20Set%20Radio%20Bumper%202.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/Sega%20Tape%20Bumper.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/bump10.mp3' )
         
         if self.discord_cog == None or self.youtube_cog == None:
             print_message(message='Could not get discord or youtube cog', error='error', came_from='Radio_Client')
@@ -49,25 +59,35 @@ class Radio_Client(commands.Cog):
     async def radio(self,ctx, radio_id) -> None:
         if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.radio_jsr_playing == False:
             await play_radio(self,ctx,f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3','radio')
+        
         elif does_radio_db_exist(radio_id) == False:
             await ctx.channel.send('Radio with that id does not exist')
+        
         elif self.discord_cog.radio_playing != False:
             await ctx.channel.send('Another radiostation is already playing, please use !stop')
+       
         elif self.discord_cog.radio_jsr_playing != False:
             await ctx.channel.send('JSR station is already playing, please use !stop')
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
 
     @commands.command()
-    async def jsr(self,ctx):
+    async def jsr(self,ctx, station:str = '') -> None:
         try:
-            if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.is_audio_stopping == False:            
-                await play_jsr_radio(self,ctx)
+            if ctx.author.voice != None and self.discord_cog.radio_jsr_playing == False and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.is_audio_stopping == False:    
+                await play_jsr_radio(self,ctx, station)
             else:
-                await ctx.channel.send('You are not in the voice channel or the bot is playing youtube videos, use !stop')
-
+                await ctx.channel.send('You are not in the voice channel or the bot is already playing something, use !stop')
         except BaseException as e:
             await print_message_async(message='Could not stream music from jsr.live',error=str(e), came_from='Radio_Client')
+    
+    @commands.command()
+    async def jsr_stations(self,ctx):
+        tup_stations: tuple[str] = get_stations_jsr()
+        message = ''
+        for station in tup_stations:
+            message += station[0] + ', '
+        await ctx.send('```'+message+'```')
 
     @commands.command()
     async def radio_search_by_country(self,ctx) -> None:
@@ -106,7 +126,7 @@ class Radio_Client(commands.Cog):
         except BaseException as e:
             await print_message_async(message='Error while starting new radio', error=str(e),came_from='Radio_Client')
     
-    async def set_radio_playing_status(self,ctx,status:bool,field_specified:str) -> None:
+    async def set_radio_playing_status(self,ctx,status:bool,field_specified:str, station:str = '') -> None:
 
         if self.discord_cog != None and field_specified == 'radio':
             self.discord_cog.radio_playing = status
@@ -114,12 +134,12 @@ class Radio_Client(commands.Cog):
         elif self.discord_cog != None and field_specified == 'radio_jsr':
             self.discord_cog.radio_jsr_playing = status
             if status == False:
-                await play_radio(self,ctx,get_random_radio_jsr().song_link,'radio_jsr')
-            
+                radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station)) if station != '' else get_random_radio_jsr()
+                await play_radio(self,ctx,radio.song_link,'radio_jsr')
         else:
             await print_message_async(message='Cant set the radio playing status',error='discord cog is empty',came_from='Radio_Client')
 
-async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str) -> None:
+async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str, station:str = '') -> None:
 
     if link == '' or link == None:
         await print_message_async(message='The link is empty',came_from='Radio_Client', error='error')
@@ -138,21 +158,44 @@ async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str) -> Non
                 URL = info['formats'][0]['url']
 
                 audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL, **self.FFMPEG_OPTIONS)
-                connection.play(audio, after= lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False,field_specified),self.bot.loop))
+                connection.play(audio, after= lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False,field_specified, station),self.bot.loop))
 
-                await print_message_async(message='Started playing radio',came_from='Radio_Client')
-                await self.set_radio_playing_status(ctx,True,field_specified)
+                await print_message_async(message='Streaming radio',came_from='Radio_Client')
+                await self.set_radio_playing_status(ctx,True,field_specified, station)
+
     except BaseException as e:
         await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
         await ctx.send('Could not stream that radio. Sorry :(')
         self.audio_cog.stop()
 
-async def play_jsr_radio(self:Radio_Client,ctx):
-    radio:Radio_JSR = get_random_radio_jsr()
-    self.discord_cog.radio_jsr_playing = True
+async def play_jsr_radio(self:Radio_Client,ctx, station:str = ''):
+    
+    if station != '':
+        await send_station_logo(ctx,station)
+        radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station))
+    else: 
+         radio:Radio_JSR = get_random_radio_jsr()
 
-    await play_radio(self,ctx,radio.song_link,'radio_jsr')
-    await print_message_async(message=f'Playing jsr station, song: {radio.song_name}',came_from='Radio_Client')
+    if radio.id == '':
+        await ctx.send('This radiostation doesnt exist')
+        return
+
+    #could play a bump or static before radio music for full radio immersion | 10% for static, 20% for bump and 70% for the music
+    radio_determinant = random.randint(1,10)
+    if radio_determinant == 1 :
+        await play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
+    elif radio_determinant <= 2:
+        await play_radio(self,ctx,radio.song_link,'radio_jsr',station)
+    else:
+        await play_radio(self,ctx,random.choice(self.bumps),'radio_jsr',station)
+
+    await print_message_async(message=f'Playing jsr station',came_from='Radio_Client')
+
+async def send_station_logo(ctx, station:str) -> None:
+    for jsr_station in get_stations_jsr():
+        if station in jsr_station:
+            await ctx.send(f'Started streaming station {station} from jetsetradio.live, enjoy those groovy beats 📼🎶', file = discord.File(f'jsr_station_logo/{station}.png'))
+            #await ctx.send(file = discord.File(f'jsr_station_logo/{station}.png'))
 
 def join_radio_info(radios:list[Radio]) -> str:
     message=''

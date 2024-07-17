@@ -63,10 +63,11 @@ class Discord_Client(commands.Cog):
             if self.voice_client.is_connected() and (len(self.voice_channel.members) == 1 or self.voice_client.is_playing() == False):
                 self.voice_channel = None
                 self.voice_client = None
+                self.is_audio_stopping = False
                 self.yt_playing = False
                 self.radio_jsr_playing = False
                 self.radio_playing = False
-                self.youtube_queue = None
+                self.youtube_queue.clear()
                 await self.voice_client.disconnect(force=True)
     
     @tasks.loop(minutes=20)
@@ -119,7 +120,8 @@ class Discord_Client(commands.Cog):
         '!resume - this command will resume the paused song 🔹\n\n'\
         '!status - this command will show current status of the bot🔥\n\n'\
         '!queue - this command will show the queue of the youtube videos🎼\n\n'\
-        '!jsr - this command will stream random music from JetSetRadio.live🎉 "Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
+        '!jsr - this command accepts radio station name and streams random music from JetSetRadio.live🎉 (example: !jsr Future) if you wont set any radio then the bot will play random music from all jsr stations \n"Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
+        '!jsr_stations - this command will show all jsr stations that you could play 📻\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 
@@ -150,7 +152,7 @@ class Discord_Client(commands.Cog):
             elif self.yt_playing == True:
                 await ctx.channel.send('The bot is playing youtube videos')
             elif self.radio_jsr_playing == True:
-                await ctx.channel.send('The bot is playing music from JetSetRadio.live')
+                await ctx.channel.send('The bot is playing music from jetsetradio.live')
             elif self.radio_playing == True:
                 await ctx.channel.send('The bot is playing music from radio')
             elif connection.is_connected():
