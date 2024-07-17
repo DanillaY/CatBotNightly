@@ -61,19 +61,13 @@ class Radio_Client(commands.Cog):
     @commands.command()
     async def jsr(self,ctx):
         try:
-            if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False:            
-                radio:Radio_JSR = get_random_radio_jsr()
-                self.discord_cog.radio_jsr_playing = True
-
-                await play_radio(self,ctx,radio.song_link,'radio_jsr')
-                await print_message_async(message=f'Playing jsr station, song: {radio.song_name}',came_from='Radio_Client')
+            if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.is_audio_stopping == False:            
+                await play_jsr_radio(self,ctx)
             else:
                 await ctx.channel.send('You are not in the voice channel or the bot is playing youtube videos, use !stop')
 
         except BaseException as e:
-            #When radio is being interrupted during work, raises Not connected to voice. error because the stop command erases voice client connection and then starts jsr method with empty ctx var
-            if str(e) != 'Not connected to voice.':
-                await print_message_async(message='Could not stream music from jsr.live',error=str(e), came_from='Radio_Client')
+            await print_message_async(message='Could not stream music from jsr.live',error=str(e), came_from='Radio_Client')
 
     @commands.command()
     async def radio_search_by_country(self,ctx) -> None:
@@ -102,13 +96,13 @@ class Radio_Client(commands.Cog):
                 await ctx.channel.send(f'Right now playing {radio.title}, country {radio.country}, id {radio.id}')
 
             elif self.discord_cog.radio_playing == True:
-                await ctx.channel.send('Bot is streaming a radiostation, use !stop and !yt to play yt links')
+                await ctx.channel.send('Bot is streaming a radiostation, use !stop and !yt to play youtube links')
 
             elif self.discord_cog.yt_playing == True:
                 await ctx.channel.send('Bot is playing a youtube queue, use !stop and !radio_random or !radio to play radiostations')
                 
             else:
-                await ctx.channel.send('You are not in the voice channel or the bot playing radiostation, use !stop to play yt links or a radiostation')
+                await ctx.channel.send('You are not in the voice channel or the bot playing a radiostation, use !stop to play yt links or a radiostation')
         except BaseException as e:
             await print_message_async(message='Error while starting new radio', error=str(e),came_from='Radio_Client')
     
@@ -131,6 +125,9 @@ async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str) -> Non
         await print_message_async(message='The link is empty',came_from='Radio_Client', error='error')
         return
     
+    if self.discord_cog.is_audio_stopping == True:
+        return
+    
     try:
         channel: discord.VoiceChannel = ctx.author.voice.channel
         connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
@@ -146,10 +143,16 @@ async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str) -> Non
                 await print_message_async(message='Started playing radio',came_from='Radio_Client')
                 await self.set_radio_playing_status(ctx,True,field_specified)
     except BaseException as e:
-        if str(e) != 'Not connected to voice.':
-            await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
-            await ctx.send('Could not stream that radio. Sorry :(')
+        await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
+        await ctx.send('Could not stream that radio. Sorry :(')
         self.audio_cog.stop()
+
+async def play_jsr_radio(self:Radio_Client,ctx):
+    radio:Radio_JSR = get_random_radio_jsr()
+    self.discord_cog.radio_jsr_playing = True
+
+    await play_radio(self,ctx,radio.song_link,'radio_jsr')
+    await print_message_async(message=f'Playing jsr station, song: {radio.song_name}',came_from='Radio_Client')
 
 def join_radio_info(radios:list[Radio]) -> str:
     message=''

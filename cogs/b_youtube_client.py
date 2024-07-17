@@ -52,15 +52,6 @@ class Youtube_Client(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> None:
         await print_message_async(message='Youtube cog started working',came_from='Youtube_Client')
-    
-    async def _yt_stop(self,ctx):
-        await ctx.channel.send('Youtube queue has ended')
-        await self.discord_cog.voice_client.disconnect(force=True)
-        await print_message_async(message='Bot is stopped',came_from='Audio_Client')
-        self.discord_cog.yt_playing = False
-        self.discord_cog.voice_channel = None
-        self.discord_cog.voice_client = None
-        self.youtube_cog.youtube_queue.clear()
 
     async def play_next_yt(self, ctx):
         if len(self.discord_cog.youtube_queue) > 0:
@@ -71,7 +62,8 @@ class Youtube_Client(commands.Cog):
             except BaseException as e:
                 await print_message_async(message='Could not play next song',error=str(e), came_from='Youtube_Client')
         else:
-            await self._yt_stop(ctx)
+            await ctx.channel.send('Youtube queue has ended')
+            await self.bot.get_cog('Audio_Client').stop(ctx)
 
     async def add_to_yt_queue(self,ctx,link):
         await print_message_async(message='Added new song to the queue',came_from='Youtube_Client')
@@ -114,9 +106,8 @@ class Youtube_Client(commands.Cog):
    
         except BaseException as e:
             await print_message_async(message='Could not play yt video', error=str(e),came_from='Youtube_Client')
-            self.discord_cog.voice_channel = None
-            self.discord_cog.voice_client = None
-            await connection.disconnect(force=True)
+            await ctx.channel.send('Youtube queue has ended')
+            await self.bot.get_cog('Audio_Client').stop(ctx)
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Youtube_Client(client))

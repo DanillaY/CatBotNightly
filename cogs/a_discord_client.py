@@ -42,6 +42,7 @@ class Discord_Client(commands.Cog):
         self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified in your twitch database
         self.listen_if_bot_unused.start()
         self.radio_jsr_playing: bool = False
+        self.is_audio_stopping = False
         self.radio_playing: bool = False
         self.yt_playing: bool = False
         self.youtube_queue: list[str] = []
