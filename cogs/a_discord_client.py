@@ -1,4 +1,5 @@
 import json
+import random
 import discord
 from discord.ext import tasks, commands
 import os
@@ -121,6 +122,7 @@ class Discord_Client(commands.Cog):
         '!status - this command will show current status of the bot🔥\n\n'\
         '!queue - this command will show the queue of the youtube videos🎼\n\n'\
         '!jsr - this command accepts radio station name and streams random music from JetSetRadio.live🎉 (example: !jsr Future) if you wont set any radio then the bot will play random music from all jsr stations \n"Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
+        '!eight_ball - this command will look into the future and tell you upcoming results to the question that bothers you 🎱🔮\n\n'\
         '!jsr_stations - this command will show all jsr stations that you could play 📻\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
@@ -158,6 +160,22 @@ class Discord_Client(commands.Cog):
             elif connection.is_connected():
                 await ctx.channel.send('The bot is in the channel (please use !stop command)')
 
+    @commands.command()
+    async def eight_ball(self,ctx) -> None:
+        answers = ('It is certain', 'It is decidedly so',
+                   'Reply hazy, try again','Ask again later...',
+                   'Dont count on it','My reply is no',
+                   'Without a doubt','Better not tell you now',
+                   'My sources say no','Yes definitely',
+                   'Cannot predict now','Outlook not so good',
+                   'You may rely on it','Concentrate and ask again',
+                   'Very doubtful','As I see it, yes',
+                   'Most likely', 'Signs point to yes', 'Stars are saying no')
+        if ctx.message.content != '' and len(ctx.message.content.split('eight_ball')[1]) > 8:
+            await ctx.send(random.choice(answers) + ' 🎱✨🧙‍♂️')
+        else:
+             await ctx.send('We are out of fairy wings, cant tell right now... 🧙‍♂️')
+            
     async def async_cleanup(self):
         await print_message_async(message='Closing the bot connection',came_from='Discord_Client')
 

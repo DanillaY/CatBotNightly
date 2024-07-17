@@ -87,7 +87,7 @@ class Radio_Client(commands.Cog):
         message = ''
         for station in tup_stations:
             message += station[0] + ', '
-        await ctx.send('```'+message+'```')
+        await ctx.send('```'+message[:-1]+'```')
 
     @commands.command()
     async def radio_search_by_country(self,ctx) -> None:
@@ -135,7 +135,7 @@ class Radio_Client(commands.Cog):
             self.discord_cog.radio_jsr_playing = status
             if status == False:
                 radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station)) if station != '' else get_random_radio_jsr()
-                await play_radio(self,ctx,radio.song_link,'radio_jsr')
+                await play_radio(self,ctx,radio.song_link,'radio_jsr', station)
         else:
             await print_message_async(message='Cant set the radio playing status',error='discord cog is empty',came_from='Radio_Client')
 
@@ -182,10 +182,11 @@ async def play_jsr_radio(self:Radio_Client,ctx, station:str = ''):
 
     #could play a bump or static before radio music for full radio immersion | 10% for static, 20% for bump and 70% for the music
     radio_determinant = random.randint(1,10)
-    if radio_determinant == 1 :
-        await play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
-    elif radio_determinant <= 2:
+    if radio_determinant <= 2 :
         await play_radio(self,ctx,radio.song_link,'radio_jsr',station)
+        await play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
+    elif radio_determinant == 1:
+        await play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
     else:
         await play_radio(self,ctx,random.choice(self.bumps),'radio_jsr',station)
 
