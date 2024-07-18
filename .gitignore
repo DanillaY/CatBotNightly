@@ -2,6 +2,4 @@ twitch.db
 radio.db
 jet_set_radio.db
 .env
-__pycache__/
-cogs/__pycache__/
-database/__pycache__/
+**/__pycache__/

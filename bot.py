@@ -1,10 +1,8 @@
 import asyncio
-import json
 import discord
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
-import yt_dlp
 from cogs import *
 from database.sqlite import radio_sqlite_init
 

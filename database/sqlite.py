@@ -6,16 +6,16 @@ import sqlite3
 import pandas as pd
 from requests import get
 
-from database.radio import Radio, list_tuple_to_radio_list
-from database.radio_jsr import Radio_JSR, list_tuple_to_radio_jsr_list
-from database.streamer import Streamer, list_tuple_to_streamer_list
+from database.models.radio import Radio, list_tuple_to_radio_list
+from database.models.radio_jsr import Radio_JSR, list_tuple_to_radio_jsr_list
+from database.models.streamer import Streamer, list_tuple_to_streamer_list
 from logger import print_message
 
 def database_sqlite_init(database_name:str) -> None:
     connection = sqlite3.connect(f'{database_name}.db')
     cursor = connection.cursor()
 
-    with open(f'./database/{database_name}.sql', 'r') as sql_file:
+    with open(f'./database/sql_scripts/{database_name}.sql', 'r') as sql_file:
         sql_script = sql_file.read()
 
     cursor.executescript(sql_script)

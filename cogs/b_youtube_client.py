@@ -63,7 +63,9 @@ class Youtube_Client(commands.Cog):
                 await print_message_async(message='Could not play next song',error=str(e), came_from='Youtube_Client')
         else:
             await ctx.channel.send('Youtube queue has ended')
-            await self.bot.get_cog('Audio_Client').stop(ctx)
+            #since the bot could be stopped at any time need to check the connection to not raise stop method twice 
+            if self.discord_cog.voice_client != None and self.discord_cog.voice_channel != None:
+                await self.bot.get_cog('Audio_Client').stop(ctx)
 
     async def add_to_yt_queue(self,ctx,link):
         await print_message_async(message='Added new song to the queue',came_from='Youtube_Client')
@@ -107,7 +109,6 @@ class Youtube_Client(commands.Cog):
         except BaseException as e:
             await print_message_async(message='Could not play yt video', error=str(e),came_from='Youtube_Client')
             await ctx.channel.send('Youtube queue has ended')
-            await self.bot.get_cog('Audio_Client').stop(ctx)
 
 async def setup(client: commands.Bot) -> None:
     await client.add_cog(Youtube_Client(client))

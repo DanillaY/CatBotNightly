@@ -32,13 +32,13 @@ class Audio_Client(commands.Cog):
             
             if ctx.author.voice != None and connection != None:
                 self.discord_cog.is_audio_stopping = True
+                self.discord_cog.youtube_queue.clear()
                 self.discord_cog.voice_channel = None
                 self.discord_cog.voice_client = None
                 self.discord_cog.radio_jsr_playing = False
                 self.discord_cog.yt_playing = False
                 self.discord_cog.radio_playing = False
                 await connection.disconnect(force=True)
-                self.discord_cog.youtube_queue.clear()
                 await print_message_async(message='Bot is stopped',came_from='Audio_Client')
                 self.discord_cog.is_audio_stopping = False
             else:
@@ -46,7 +46,6 @@ class Audio_Client(commands.Cog):
         except BaseException as e:
             await print_message_async(message='Error while stoping the audio',error=str(e),came_from='Audio_Client')
         
-
     @commands.command()
     async def pause(self,ctx) -> None:
         connection: discord.VoiceClient = self.discord_cog.voice_client

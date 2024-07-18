@@ -11,7 +11,7 @@ from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
 from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, database_sqlite_init
-from database.streamer import Streamer
+from database.models.streamer import Streamer
 from logger import print_message_async
 
 '''
@@ -124,6 +124,7 @@ class Discord_Client(commands.Cog):
         '!jsr - this command accepts radio station name and streams random music from JetSetRadio.live🎉 (example: !jsr Future) if you wont set any radio then the bot will play random music from all jsr stations \n"Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
         '!eight_ball - this command will look into the future and tell you upcoming results to the question that bothers you 🎱🔮\n\n'\
         '!jsr_stations - this command will show all jsr stations that you could play 📻\n\n'\
+        '!wr_run - this command accepts an optional game_name value and shows the random category world record from that game, if the game_name is not set then will show a random world record (example: !wr_run garfields nightmare)\n\n'\
         'also this bot is listening for some twitch channels so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')
 
@@ -171,6 +172,8 @@ class Discord_Client(commands.Cog):
                    'You may rely on it','Concentrate and ask again',
                    'Very doubtful','As I see it, yes',
                    'Most likely', 'Signs point to yes', 'Stars are saying no')
+        await print_message_async(message='Predicting future',came_from='Discord_Client')
+
         if ctx.message.content != '' and len(ctx.message.content.split('eight_ball')[1]) > 8:
             await ctx.send(random.choice(answers) + ' 🎱✨🧙‍♂️')
         else:
