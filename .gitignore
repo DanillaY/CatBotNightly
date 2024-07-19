@@ -1,5 +1,6 @@
 twitch.db
 radio.db
 jet_set_radio.db
+speedrun.db
 .env
 **/__pycache__/

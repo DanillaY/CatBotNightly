@@ -1,3 +1,4 @@
+
 class Streamer:
     def __init__(self, id:str, query:str, stream_link:str, start_stream:str):
         #take id variable from api call

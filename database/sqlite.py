@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from random import randint
 import random
 import sqlite3
@@ -8,10 +9,11 @@ from requests import get
 
 from database.models.radio import Radio, list_tuple_to_radio_list
 from database.models.radio_jsr import Radio_JSR, list_tuple_to_radio_jsr_list
+from database.models.speedrun import Speedrun
 from database.models.streamer import Streamer, list_tuple_to_streamer_list
 from logger import print_message
 
-def database_sqlite_init(database_name:str) -> None:
+def database_sqlite_init_from_script(database_name:str) -> None:
     connection = sqlite3.connect(f'{database_name}.db')
     cursor = connection.cursor()
 
@@ -22,10 +24,18 @@ def database_sqlite_init(database_name:str) -> None:
     connection.commit()
     connection.close()
 
-def insert_new_streamer(streamer:Streamer):
+def insert_new_streamer(streamer:Streamer) -> None:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
     cursor.execute('INSERT OR REPLACE INTO twitch VALUES(?,?,?,?)',(streamer.id,streamer.query,streamer.stream_link,streamer.start_stream))
+
+    connection.commit()
+    connection.close()
+
+def insert_new_speedrun(speedrun:Speedrun) -> None:
+    connection = sqlite3.connect('speedrun.db')
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO speedrun VALUES(?,?,?,?,?,?,?)',(speedrun.id,speedrun.game_id,speedrun.run_id,speedrun.speedrun_link,speedrun.game_name,speedrun.category,speedrun.date))
 
     connection.commit()
     connection.close()
@@ -59,20 +69,11 @@ def find_twitch_start_stream_by_id(streamer_id:str, start_time:str) -> bool:
     connection.close()
     return id_count > 0
 
-def does_stremer_db_exist(streamer_id:str) -> bool:
-    connection = sqlite3.connect('twitch.db')
+def does_record_db_exist(record_id:str, database_name:str, where_field:str)-> bool:
+    connection = sqlite3.connect(f'{database_name}.db')
     cursor = connection.cursor()
 
-    cursor.execute('SELECT COUNT(ID) FROM twitch WHERE ID == ?',(streamer_id,))
-    id_count = cursor.fetchone()[0]
-    connection.close()
-    return id_count > 0
-
-def does_radio_db_exist(radio_id:str) -> bool:
-    connection = sqlite3.connect('radio.db')
-    cursor = connection.cursor()
-
-    cursor.execute('SELECT COUNT(ID) FROM radio WHERE ID == ?',(radio_id,))
+    cursor.execute(f'SELECT COUNT(ID) FROM {database_name} WHERE {where_field} == ?',(record_id,))
     id_count = cursor.fetchone()[0]
     connection.close()
     return id_count > 0
@@ -114,7 +115,7 @@ def get_stations_jsr() -> tuple[str]:
     return tuple_stations
 
 #use this method only in this file
-def _get_all_from_table(db, where = ''):
+def _get_all_from_table(db, where = '') -> list:
     connection = sqlite3.connect(db+'.db')
     cursor = connection.cursor()
 
@@ -127,7 +128,7 @@ def _get_all_from_table(db, where = ''):
     connection.close()
     return tuple_list
 
-async def radio_sqlite_init():
+async def radio_sqlite_init() -> None:
     connection = sqlite3.connect('radio.db')
     cursor = connection.cursor()
     places:str = get('http://radio.garden/api/ara/content/places').text
@@ -147,3 +148,39 @@ async def radio_sqlite_init():
             await asyncio.sleep(randint(1,3))
             connection.commit()
     connection.close()
+
+async def database_sqlite_init_speedrun(games_ids:str):
+    games_ids_follow = games_ids.split(',')
+    connection = sqlite3.connect('speedrun.db')
+    cursor = connection.cursor()
+    cursor.execute("DELETE * FROM speedrun")
+
+    for game_id in games_ids_follow:
+        game_info:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}').text
+        json_categories = json.loads(game_info)
+        game_name = json_categories['data']['names']['international']
+
+        categories:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}/categories').text
+        json_categories = json.loads(categories)
+        category_ids = []
+        for category in json_categories['data']:
+            if category['type'] == 'per-game':
+                category_ids.append(category['id'])
+
+        for category_id in category_ids:
+            runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}').text
+            json_runs = json.loads(runs)['data']['runs']
+
+            category_info:str = get(f'https://www.speedrun.com/api/v1/categories/{category_id}').text
+            category_name = json.loads(category_info)['data']['name']
+
+            for run in json_runs:
+                date = run['run']['date']
+                speedrun_link = run['run']['weblink']
+                id = run['run']['id']
+
+                cursor.execute('INSERT OR REPLACE INTO speedrun VALUES(?, ?, ?, ?, ?, ?, ?)', (None,game_id, id, speedrun_link,game_name,category_name,date))
+                connection.commit()      
+
+    connection.close()
+    return True    

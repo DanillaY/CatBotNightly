@@ -11,7 +11,7 @@ from database.models.radio import Radio
 from discord.ext import commands
 
 from database.models.radio_jsr import Radio_JSR
-from database.sqlite import does_radio_db_exist, get_radio_db_info, get_radios_by_country, get_radios_jsr_by_station, get_random_radio, get_random_radio_jsr, get_stations_jsr
+from database.sqlite import does_record_db_exist, get_radio_db_info, get_radios_by_country, get_radios_jsr_by_station, get_random_radio, get_random_radio_jsr, get_stations_jsr
 from logger import print_message, print_message_async
 
 '''
@@ -60,7 +60,7 @@ class Radio_Client(commands.Cog):
         if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.radio_jsr_playing == False:
             await play_radio(self,ctx,f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3','radio')
         
-        elif does_radio_db_exist(radio_id) == False:
+        elif does_record_db_exist(radio_id,'radio','ID') == False:
             await ctx.channel.send('Radio with that id does not exist')
         
         elif self.discord_cog.radio_playing != False:
@@ -178,7 +178,7 @@ async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str, statio
     except BaseException as e:
         await print_message_async(message='Could not stream that radio', error=str(e),came_from='Radio_Client')
         await ctx.send('Could not stream that radio. Sorry :(')
-        self.audio_cog.stop()
+        await self.audio_cog.stop(ctx)
 
 async def send_station_logo(ctx, station:str) -> None:
     for jsr_station in get_stations_jsr():

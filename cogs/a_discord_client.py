@@ -10,7 +10,7 @@ import discord.ext
 from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, database_sqlite_init
+from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, database_sqlite_init_from_script, database_sqlite_init_speedrun
 from database.models.streamer import Streamer
 from logger import print_message_async
 
@@ -32,13 +32,14 @@ game_id = os.getenv('TWITCH_GAME_ID')
 game_tags = os.getenv('TWITCH_GAME_TAGS').split(',')
 ffmpeg_exe_path = os.getenv('FFMPEG_EXE_PATH')
 channel_id = os.getenv('TEXT_CHANNEL_ID')
+followed_games_ids = os.getenv('SPEEDRUN_GAMES_ID_FOLLOW')
 
 class Discord_Client(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         super().__init__()
-        database_sqlite_init('twitch')
-        database_sqlite_init('jet_set_radio')
+        database_sqlite_init_from_script('twitch')
+        database_sqlite_init_from_script('jet_set_radio')
         self.listen_for_twitch_channels.start()
         self.listen_for_twitch_channels_specific.start() #this method will add new streamers with tags that you specified in your twitch database
         self.listen_if_bot_unused.start()
@@ -54,6 +55,7 @@ class Discord_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        #await database_sqlite_init_speedrun(followed_games_ids)
         await print_message_async(message='Discord cog started working',came_from='Discord_Client')
     
     @tasks.loop(minutes=30)
@@ -62,13 +64,7 @@ class Discord_Client(commands.Cog):
         
         if self.voice_client != None and self.voice_channel != None:
             if self.voice_client.is_connected() and (len(self.voice_channel.members) == 1 or self.voice_client.is_playing() == False):
-                self.voice_channel = None
-                self.voice_client = None
-                self.is_audio_stopping = False
-                self.yt_playing = False
-                self.radio_jsr_playing = False
-                self.radio_playing = False
-                self.youtube_queue.clear()
+                clear_all_voice_related_fields(self)
                 await self.voice_client.disconnect(force=True)
     
     @tasks.loop(minutes=20)
@@ -88,11 +84,11 @@ class Discord_Client(commands.Cog):
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels_specific(self):
         try:
-            ch = await self.bot.fetch_channel(channel_id)
             if(len(game_tags) == 1):
                 await ch.send('Thers no tags in .env file, without tag filter you will get too much notifications so please add some (you could add multiple tags by separating them with commas)')
                 return
-
+            
+            ch = await self.bot.fetch_channel(channel_id)
             await print_message_async(message='Sending requests to twitch api (specified game)', came_from='Discord_Client')
             streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
 
@@ -100,15 +96,20 @@ class Discord_Client(commands.Cog):
                 streamer = Streamer(stream['user_id'],stream['user_login'],'https://www.twitch.tv/'+stream['user_login'],stream['started_at'])
                 list(map(lambda x: x.lower(), stream['tags']))
                 await send_discord_notification_helix_request(stream,streamer)
-                
-
+        
         except BaseException as e:
-            await print_message_async('Could not notify about streams', error=str(e),came_from='Discord_Client')
-    
+            await print_message_async('Could not notify about streams',came_from='Discord_Client')
+        
+    #thers a chance that bot will leave randomly if you play a lot of music in the background, this method allowes the bot to be used after he unpredictably leaves
+    @tasks.loop(minutes=2)
+    async def listen_for_bot_is_alive(self):
+        if self.voice_client.is_connected() == False and (len(self.youtube_queue) > 0 or self.yt_playing == True or self.radio_jsr_playing == True or self.radio_playing ==True):
+            clear_all_voice_related_fields(self)
+            await print_message_async('The bot was resurrected',came_from='Discord_Client')
+        
     @commands.command()
     async def catbot_help(self,ctx):
         message = '\t\t\t\tBot commands\n'\
-        '----------------------------------------------\n'\
         '!cat_pic - this command will send you 🐱\n\n'\
         '!cat_fact - this command will send you an interesting fact about 🐱\n\n'\
         '!yt - this command accepts a youtube link and plays it (example: !yt https://youtu.be/dQw4w9WgXcQ?si=hlZB26WckCCtv2Ua)\n\n'\
@@ -208,6 +209,15 @@ def make_api_call_twitch(link) -> dict:
                     
     content = urllib.request.urlopen(req).read()
     return json.loads(content)
+
+def clear_all_voice_related_fields(self:Discord_Client) -> None:
+    self.voice_channel = None
+    self.voice_client = None
+    self.is_audio_stopping = False
+    self.yt_playing = False
+    self.radio_jsr_playing = False
+    self.radio_playing = False
+    self.youtube_queue.clear()
 
 #use this method to access vc and channel from other cogs
 async def connect_bot_to_channel_if_not_other_cog(self: Radio_Client | Youtube_Client | Audio_Client, channel:discord.VoiceChannel) -> discord.VoiceClient:
