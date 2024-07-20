@@ -8,7 +8,7 @@ from discord.ext import tasks, commands
 from requests import get
 
 from database.models.speedrun import Speedrun
-from database.sqlite import does_record_db_exist, insert_new_speedrun
+from database.sqlite import find_speedrun_by_run_id, insert_new_speedrun
 from logger import print_message_async
 
 games_ids = os.getenv('SPEEDRUN_GAMES_ID_FOLLOW')
@@ -19,6 +19,7 @@ class Speedrun_Client(commands.Cog):
     def __init__(self,bot : commands.Bot):
         super().__init__()
         self.bot = bot
+        self.discord_cog = bot.get_cog('Discord_Client')
         self.listen_for_new_speedruns.start()
 
     @commands.Cog.listener()
@@ -27,19 +28,22 @@ class Speedrun_Client(commands.Cog):
     
     @tasks.loop(hours=2)
     async def listen_for_new_speedruns(self):
+        #need to check if the database is still getting data from api, without the check it will send all new rows thats beeing added at the initialization part to the discord server
+        if self.discord_cog.does_speedrun_db_init == True:
+            return
+        
         try:
-            
             await print_message_async(message='Sending requests to speedrun.com api (followed games)',came_from='Speedrun_Client')
 
             games_ids_follow = games_ids.split(',')
             ch = await self.bot.fetch_channel(channel_id)
 
             for game_id in games_ids_follow:
-                game_info:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}').text
+                game_info:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}',allow_redirects=False).text
                 json_categories = json.loads(game_info)
                 game_name = json_categories['data']['names']['international']
 
-                categories:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}/categories').text
+                categories:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}/categories',allow_redirects=False).text
                 json_categories = json.loads(categories)
                 category_ids = []
                 for category in json_categories['data']:
@@ -47,10 +51,10 @@ class Speedrun_Client(commands.Cog):
                         category_ids.append(category['id'])
 
                 for category_id in category_ids:
-                    runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}').text
+                    runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}',allow_redirects=False).text
                     json_runs = json.loads(runs)['data']['runs']
 
-                    category_info:str = get(f'https://www.speedrun.com/api/v1/categories/{category_id}').text
+                    category_info:str = get(f'https://www.speedrun.com/api/v1/categories/{category_id}',allow_redirects=False).text
                     category_name = json.loads(category_info)['data']['name']
 
                     for run in json_runs:
@@ -58,7 +62,7 @@ class Speedrun_Client(commands.Cog):
                         run_id = run['run']['id']
                         date = run['run']['date']
 
-                        if does_record_db_exist(run_id,'speedrun','RunId') == False:
+                        if find_speedrun_by_run_id(run_id) == False:
                             await ch.send(f'@here Thers a new {game_name} speedrun posted in the {category_name} category! \nCheckout: {speedrun_link}')
                             insert_new_speedrun(Speedrun(None,game_id,run_id,speedrun_link,game_name,category_name,date))
 
@@ -82,26 +86,20 @@ class Speedrun_Client(commands.Cog):
             else:
                 game_id:str = await get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&skip-empty=true&name={game_name}',attr_field='id',random_run=False)
 
-            print( f'https://www.speedrun.com/api/v1/games?max=20&skip-empty=true&name={game_name}')
             if game_id == '' and game_name != '':
                 await ctx.channel.send('Game was not found')
                 return
-
+            
             category_id:str = await get_value_from_api_answer(link_request=f'https://www.speedrun.com/api/v1/games/{game_id}/categories',attr_field= 'id')
-            runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}?video-only=true').text
+            runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}?video-only=true',allow_redirects=False).text
             runs_json = json.loads(runs)
 
             world_record_run = runs_json['data']['runs'][0]
-            run_comment = world_record_run['run']['comment']
             speedrun_link = world_record_run['run']['weblink']
             video_run_link = world_record_run['run']['videos']['links'][0]['uri']
             date = world_record_run['run']['date']
 
-            if world_record_run != '' and run_comment != None:
-                await ctx.channel.send(f'Speedrun.com link - {speedrun_link} \nVideo link - {video_run_link}\nWith the comment - {run_comment}\nSubmitted date - {date}')
-            elif world_record_run != '' and run_comment == None:
-                await ctx.channel.send(f'Speedrun.com link - {speedrun_link} \nVideo link - {video_run_link}\nWithout the comment\nSubmitted date - {date}')
-            
+            await ctx.channel.send(f'Speedrun.com link - {speedrun_link} \nVideo link - {video_run_link}\nSubmitted date - {date}')
             await print_message_async(message='Sending wr run', came_from='Speedrun_Client')
         except BaseException as e:
             await print_message_async(message='Erorr while sending wr run', came_from='Speedrun_Client', error=str(e))
@@ -111,7 +109,7 @@ async def get_value_from_api_answer(link_request:str,attr_field:str,random_run:b
             await print_message_async('The request link is empty')
             return
         
-        api_answer:str = get(link_request).text
+        api_answer:str = get(link_request, allow_redirects=False).text
         request_list_json = json.loads(api_answer)
         json_items: list[str] = []
 

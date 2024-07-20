@@ -13,6 +13,6 @@ def list_tuple_to_radio_list(list: list[tuple]) -> list[Radio]:
         try:
             result_list.append(Radio(radio[0],radio[1],radio[2]))
         except:
-            print_message('The list is not in the correct format')
+            print_message(message='The list is not in the correct format',error='format error',came_from='Radio_Class')
             return []
     return result_list

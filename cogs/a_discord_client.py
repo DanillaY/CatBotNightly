@@ -10,7 +10,7 @@ import discord.ext
 from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, insert_stream_start_data, database_sqlite_init_from_script, database_sqlite_init_speedrun
+from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, update_stream_start_data, database_sqlite_init_from_script, database_sqlite_init_speedrun
 from database.models.streamer import Streamer
 from logger import print_message_async
 
@@ -47,6 +47,7 @@ class Discord_Client(commands.Cog):
         self.is_audio_stopping = False
         self.radio_playing: bool = False
         self.yt_playing: bool = False
+        self.does_speedrun_db_init = True
         self.youtube_queue: list[str] = []
         self.bot = bot
         self.voice_client:discord.voice_client.VoiceClient = None
@@ -55,7 +56,7 @@ class Discord_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        #await database_sqlite_init_speedrun(followed_games_ids)
+        self.does_speedrun_db_init = await database_sqlite_init_speedrun(followed_games_ids)
         await print_message_async(message='Discord cog started working',came_from='Discord_Client')
     
     @tasks.loop(minutes=30)
@@ -191,7 +192,7 @@ async def send_discord_notification_search_request(json_channels,streamer: Strea
     for channels in json_channels['data']:
         #check if it is not the same stream
         if str(channels['id']) == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
-            insert_stream_start_data(channels['started_at'], str(streamer.id))
+            update_stream_start_data(channels['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
             
 async def send_discord_notification_helix_request(stream:str, streamer:Streamer, channel: discord.VoiceChannel) -> None:
@@ -199,7 +200,7 @@ async def send_discord_notification_helix_request(stream:str, streamer:Streamer,
         has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
 
         if has_tag and find_twitch_start_stream_by_id(streamer.id,streamer.start_stream) == False:
-            insert_stream_start_data(stream['started_at'], str(streamer.id))
+            update_stream_start_data(stream['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
 
 def make_api_call_twitch(link) -> dict:

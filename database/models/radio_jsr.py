@@ -15,7 +15,7 @@ def list_tuple_to_radio_jsr_list(list: list[tuple]) -> list[Radio_JSR]:
         try:
             result_list.append(Radio_JSR(radio_jsr[0],radio_jsr[1],radio_jsr[2],radio_jsr[3], radio_jsr[4]))
         except:
-            print_message('The list is not in the correct format')
+            print_message(message='The list is not in the correct format',error='format error',came_from='Radio_JSR_Class')
             return []
     
     return result_list

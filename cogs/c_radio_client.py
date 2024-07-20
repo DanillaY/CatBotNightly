@@ -11,7 +11,7 @@ from database.models.radio import Radio
 from discord.ext import commands
 
 from database.models.radio_jsr import Radio_JSR
-from database.sqlite import does_record_db_exist, get_radio_db_info, get_radios_by_country, get_radios_jsr_by_station, get_random_radio, get_random_radio_jsr, get_stations_jsr
+from database.sqlite import find_jet_set_radio_station, find_radio_by_id, get_radio_db_info, get_radios_by_country, get_radios_jsr_by_station, get_random_radio, get_random_radio_jsr, get_stations_jsr
 from logger import print_message, print_message_async
 
 '''
@@ -57,28 +57,33 @@ class Radio_Client(commands.Cog):
     
     @commands.command()
     async def radio(self,ctx, radio_id) -> None:
-        if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.radio_jsr_playing == False:
+        
+        if ctx.author.voice != None and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.radio_jsr_playing == False and find_radio_by_id(radio_id) == True:
             await play_radio(self,ctx,f'http://radio.garden/api/ara/content/listen/{radio_id}/channel.mp3','radio')
         
-        elif does_record_db_exist(radio_id,'radio','ID') == False:
+        elif find_radio_by_id(radio_id) == False:
             await ctx.channel.send('Radio with that id does not exist')
+            return
         
         elif self.discord_cog.radio_playing != False:
             await ctx.channel.send('Another radiostation is already playing, please use !stop')
+            return
        
         elif self.discord_cog.radio_jsr_playing != False:
             await ctx.channel.send('JSR station is already playing, please use !stop')
+            return
         else:
             await ctx.channel.send('You should be in the voice channel to use that command')
+            return
 
     @commands.command()
     async def jsr(self,ctx, station:str = '') -> None:
         try:
-            if station != '' and does_record_db_exist(station,'jet_set_radio','station'):
+            if station != '' and find_jet_set_radio_station(station):
                 await send_station_logo(ctx,station)
                 radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station))
 
-            elif does_record_db_exist(station,'jet_set_radio','station') == False:
+            elif find_jet_set_radio_station(station) == False:
                 await ctx.send('This radiostation doesnt exist')
                 return
             
