@@ -25,7 +25,7 @@ class Speedrun_Client(commands.Cog):
     async def on_ready(self) -> None:
         await print_message_async(message='Speedrun cog started working',came_from='Speedrun_Client')
     
-    @tasks.loop(minutes=20)
+    @tasks.loop(hours=2)
     async def listen_for_new_speedruns(self):
         try:
             
@@ -61,7 +61,7 @@ class Speedrun_Client(commands.Cog):
                         if does_record_db_exist(run_id,'speedrun','RunId') == False:
                             await ch.send(f'@here Thers a new {game_name} speedrun posted in the {category_name} category! \nCheckout: {speedrun_link}')
                             insert_new_speedrun(Speedrun(None,game_id,run_id,speedrun_link,game_name,category_name,date))
-                            
+
         except BaseException as e:
             await print_message_async(message='Error while sending requests to speedrun.com api (followed games)',came_from='Speedrun_Client',error=str(e))
                 

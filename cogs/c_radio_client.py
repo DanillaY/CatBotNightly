@@ -74,15 +74,16 @@ class Radio_Client(commands.Cog):
     @commands.command()
     async def jsr(self,ctx, station:str = '') -> None:
         try:
-            if station != '':
+            if station != '' and does_record_db_exist(station,'jet_set_radio','station'):
                 await send_station_logo(ctx,station)
                 radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station))
-            else: 
-                radio:Radio_JSR = get_random_radio_jsr()
 
-            if radio.id == '':
+            elif does_record_db_exist(station,'jet_set_radio','station') == False:
                 await ctx.send('This radiostation doesnt exist')
                 return
+            
+            else: 
+                radio:Radio_JSR = get_random_radio_jsr()
             
             if ctx.author.voice != None and self.discord_cog.radio_jsr_playing == False and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.is_audio_stopping == False:    
                 await play_filler_or_music(self,ctx,radio,station)
