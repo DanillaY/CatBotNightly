@@ -170,7 +170,7 @@ def get_all_from_jet_set_radio() -> tuple:
     connection = sqlite3.connect('jet_set_radio.db')
     cursor = connection.cursor()
     cursor.execute(f'SELECT * FROM jet_set_radio')
-    radios = cursor.fetchone()[0]
+    radios = cursor.fetchall()
     connection.close()
     
     return radios

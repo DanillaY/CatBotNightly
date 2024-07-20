@@ -79,11 +79,13 @@ class Radio_Client(commands.Cog):
     @commands.command()
     async def jsr(self,ctx, station:str = '') -> None:
         try:
-            if station != '' and find_jet_set_radio_station(station):
+            does_station_exist = find_jet_set_radio_station(station)
+
+            if station != '' and does_station_exist:
                 await send_station_logo(ctx,station)
                 radio:Radio_JSR = random.choice(get_radios_jsr_by_station(station))
 
-            elif find_jet_set_radio_station(station) == False:
+            elif station != '' and does_station_exist == False:
                 await ctx.send('This radiostation doesnt exist')
                 return
             
@@ -202,7 +204,7 @@ def join_radio_info(radios:list[Radio]) -> str:
 async def play_filler_or_music(self: Radio_JSR,ctx, radio:Radio_JSR,station:str) -> None:
     random.seed(datetime.now().second)
     radio_determinant = random.randint(1,10)
-
+    
     if radio_determinant <= 2 :
         await play_radio(self,ctx,random.choice(self.bumps),'radio_jsr',station)
     elif radio_determinant == 1:
