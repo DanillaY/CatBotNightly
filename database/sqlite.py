@@ -196,7 +196,7 @@ async def radio_sqlite_init() -> None:
             connection.commit()
     connection.close()
 
-async def database_sqlite_init_speedrun(games_ids:str) -> bool:
+async def speedrun_sqlite_init(games_ids:str) -> bool:
     try:
         games_ids_follow = games_ids.split(',')
         connection = sqlite3.connect('speedrun.db')

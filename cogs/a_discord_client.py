@@ -10,7 +10,7 @@ import discord.ext
 from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
-from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, update_stream_start_data, database_sqlite_init_from_script, database_sqlite_init_speedrun
+from database.sqlite import find_twitch_start_stream_by_id, get_twitch_db_streamers, update_stream_start_data, database_sqlite_init_from_script, speedrun_sqlite_init
 from database.models.streamer import Streamer
 from logger import print_message_async
 
@@ -56,7 +56,7 @@ class Discord_Client(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        self.does_speedrun_db_init = await database_sqlite_init_speedrun(followed_games_ids)
+        self.does_speedrun_db_init = await speedrun_sqlite_init(followed_games_ids)
         await print_message_async(message='Discord cog started working',came_from='Discord_Client')
     
     @tasks.loop(minutes=30)
