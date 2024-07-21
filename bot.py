@@ -3,7 +3,11 @@ import discord
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
-from cogs import *
+from cogs import a_discord_client
+from cogs import b_speedrun_client
+from cogs import b_youtube_client
+from cogs import c_audio_client
+from cogs import c_radio_client
 from database.sqlite import speedrun_sqlite_init
 
 load_dotenv()
@@ -15,14 +19,15 @@ async def on_message(message):
         if word in message.content:
             await message.delete()
 
-async def cog_load(client : commands.Bot):
-    for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
-            await client.load_extension(f"cogs.{filename[:-3]}")
-
 async def main():
     client = commands.Bot(command_prefix=commands.when_mentioned_or('!'), intents=discord.Intents.all())
-    await cog_load(client)
+    
+    await client.add_cog(a_discord_client.Discord_Client(client))
+    await client.add_cog(b_speedrun_client.Speedrun_Client(client))
+    await client.add_cog(b_youtube_client.Youtube_Client(client))
+    await client.add_cog(c_audio_client.Audio_Client(client))
+    await client.add_cog(c_radio_client.Radio_Client(client))
+    
     client.add_listener(on_message,'on_message')
     await client.start(secret)
 

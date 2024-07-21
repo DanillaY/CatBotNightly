@@ -5,6 +5,7 @@ import discord
 import yt_dlp
 from discord.ext import commands
 
+from cogs import a_discord_client
 from cogs.a_discord_client import *
 from cogs.c_audio_client import *
 from logger import print_message_async, print_message
@@ -88,7 +89,7 @@ class Youtube_Client(commands.Cog):
 
         try:
             channel: discord.VoiceChannel = ctx.author.voice.channel if self.discord_cog.voice_channel == None else self.discord_cog.voice_channel
-            connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
+            connection: discord.VoiceClient = await a_discord_client.connect_bot_to_channel_if_not_other_cog(self,channel)
 
             if self.discord_cog.voice_client.is_playing():
                 await self.add_to_yt_queue(ctx,link)
@@ -100,7 +101,7 @@ class Youtube_Client(commands.Cog):
                     info = await loop.run_in_executor(None, lambda: ydl.extract_info(link, download=False))
                     URL = info['requested_formats'][1]['url']
 
-                    audio = discord.FFmpegPCMAudio(source=URL, **self.FFMPEG_OPTIONS, executable=ffmpeg_exe_path)
+                    audio = discord.FFmpegPCMAudio(source=URL, **self.FFMPEG_OPTIONS)
                     play_next = lambda e: asyncio.run_coroutine_threadsafe(self.play_next_yt(ctx), self.bot.loop)
                     self.discord_cog.yt_playing = True
                     

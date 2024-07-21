@@ -45,7 +45,7 @@ def update_stream_start_data(start_stream, id) -> None:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
 
-    cursor.execute('UPDATE twitch SET start_stream = ? WHERE id = ?',(start_stream, id))
+    cursor.execute('UPDATE twitch SET StartStream = ? WHERE id = ?',(start_stream, id))
     connection.commit()
     connection.close()
 
@@ -83,7 +83,7 @@ def find_twitch_start_stream_by_id(streamer_id:str, start_time:str) -> bool:
     connection = sqlite3.connect('twitch.db')
     cursor = connection.cursor()
 
-    cursor.execute('SELECT COUNT(ID) FROM twitch WHERE ID == ? AND start_stream == ?',(streamer_id, start_time,))
+    cursor.execute('SELECT COUNT(ID) FROM twitch WHERE ID == ? AND StartStream == ?',(streamer_id, start_time,))
     id_count = cursor.fetchone()[0]
     connection.close()
     return id_count > 0
@@ -176,6 +176,8 @@ def get_all_from_jet_set_radio() -> tuple:
     return radios
 
 async def radio_sqlite_init() -> None:
+    database_sqlite_init_from_script('radio')
+
     connection = sqlite3.connect('radio.db')
     cursor = connection.cursor()
     places:str = get('http://radio.garden/api/ara/content/places',allow_redirects=False).text
@@ -198,6 +200,8 @@ async def radio_sqlite_init() -> None:
 
 async def speedrun_sqlite_init(games_ids:str) -> bool:
     try:
+        database_sqlite_init_from_script('speedrun')
+        
         games_ids_follow = games_ids.split(',')
         connection = sqlite3.connect('speedrun.db')
         cursor = connection.cursor()

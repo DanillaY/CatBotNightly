@@ -1,12 +1,11 @@
+import asyncio
 from datetime import datetime
 import os
 import random
 
 import discord
 import yt_dlp
-from cogs.a_discord_client import *
-from cogs.b_youtube_client import *
-from cogs.c_audio_client import *
+from cogs import a_discord_client
 from database.models.radio import Radio
 from discord.ext import commands
 
@@ -170,14 +169,14 @@ async def play_radio(self:Radio_Client,ctx,link:str, field_specified:str, statio
     
     try:
         channel: discord.VoiceChannel = ctx.author.voice.channel
-        connection: discord.VoiceClient = await connect_bot_to_channel_if_not_other_cog(self,channel)
+        connection: discord.VoiceClient = await a_discord_client.connect_bot_to_channel_if_not_other_cog(self,channel)
 
         if connection.is_playing() == False and self.discord_cog.yt_playing == False and self.discord_cog.voice_client != None:
             with yt_dlp.YoutubeDL() as ydl:
                 info = ydl.extract_info(link, download=False)
                 URL = info['formats'][0]['url']
 
-                audio = discord.FFmpegPCMAudio(executable=ffmpeg_exe_path,source=URL, **self.FFMPEG_OPTIONS)
+                audio = discord.FFmpegPCMAudio(source=URL, **self.FFMPEG_OPTIONS)
                 connection.play(audio, after= lambda e: asyncio.run_coroutine_threadsafe(self.set_radio_playing_status(ctx,False,field_specified, station),self.bot.loop))
 
                 await print_message_async(message='Streaming radio',came_from='Radio_Client')
