@@ -61,7 +61,7 @@ class Speedrun_Client(commands.Cog):
                         date = run['run']['date']
 
                         if find_speedrun_by_run_id(run_id) == False:
-                            await ch.send(f'@here Thers a new {game_name} speedrun posted in the {category_name} category! \nCheckout: {speedrun_link}')
+                            await ch.send(f'@here A new speedrun of {game_name} was just submitted in the {category_name} category. \nRun link: {speedrun_link}')
                             insert_new_speedrun(Speedrun(None,game_id,run_id,speedrun_link,game_name,category_name,date))
 
         except BaseException as e:
