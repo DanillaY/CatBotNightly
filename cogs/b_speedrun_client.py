@@ -2,8 +2,6 @@ from datetime import datetime
 import json
 import os
 import random
-import string
-import discord
 from discord.ext import tasks, commands
 from requests import get
 
@@ -76,7 +74,7 @@ class Speedrun_Client(commands.Cog):
         try:
 
             random.seed(datetime.now().second)
-            offset = random.randint(1,41000) #need to figure out how to get the max offset amount
+            offset = random.randint(1,41000) #api doc qote "The API does not provide the total number of elements for each collection, so API clients must fetch all pages until no more results are available." Dont do that, because the number of api calls would be 1000+
 
             if game_name != '':
                 game_name:str = ctx.message.content.split('wr_run')[1].strip()

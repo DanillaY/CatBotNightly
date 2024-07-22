@@ -34,12 +34,18 @@ class Radio_Client(commands.Cog):
         #list of radio transitions before the song, dont store that in the database
         self.bumps:tuple[str] = ('https://jetsetradio.live/radio/stations/bumps/bump2.mp3',
                                  'https://jetsetradio.live/radio/stations/bumps/bump3.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/bump10.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/bump11.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/bump15.mp3',
                                  'https://jetsetradio.live/radio/stations/bumps/DJK1.mp3',
                                  'https://jetsetradio.live/radio/stations/bumps/DJK2.mp3',
-                                 'https://jetsetradio.live/radio/stations/bumps/Donkey%20Kong%20Bumper.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/Boss%20Bumper.mp3',
                                  'https://jetsetradio.live/radio/stations/bumps/Jet%20Set%20Radio%20Bumper%202.mp3',
                                  'https://jetsetradio.live/radio/stations/bumps/Sega%20Tape%20Bumper.mp3',
-                                 'https://jetsetradio.live/radio/stations/bumps/bump10.mp3' )
+                                 'https://jetsetradio.live/radio/stations/bumps/Broadway%20Bumper.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/DJK4.mp3',
+                                 'https://jetsetradio.live/radio/stations/bumps/DJK5.mp3',
+                                 )
         
         if self.discord_cog == None or self.youtube_cog == None:
             print_message(message='Could not get discord or youtube cog', error='error', came_from='Radio_Client')
@@ -206,7 +212,7 @@ async def play_filler_or_music(self: Radio_JSR,ctx, radio:Radio_JSR,station:str)
     
     if radio_determinant <= 2 :
         await play_radio(self,ctx,random.choice(self.bumps),'radio_jsr',station)
-    elif radio_determinant == 1:
+    elif radio_determinant == 5:
         await play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
     else:
         await play_radio(self,ctx,radio.song_link,'radio_jsr',station)

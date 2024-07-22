@@ -59,7 +59,7 @@ class Discord_Client(commands.Cog):
         self.does_speedrun_db_init = await speedrun_sqlite_init(followed_games_ids)
         await print_message_async(message='Discord cog started working',came_from='Discord_Client')
     
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=5)
     async def listen_if_bot_unused(self):
         await print_message_async(message='Checking for bot unused state', came_from='Discord_Client')
         
