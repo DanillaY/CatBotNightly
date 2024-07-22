@@ -61,12 +61,12 @@ class Discord_Client(commands.Cog):
     
     @tasks.loop(minutes=5)
     async def listen_if_bot_unused(self):
-        await print_message_async(message='Checking for bot unused state', came_from='Discord_Client')
         
         if self.voice_client != None and self.voice_channel != None:
             if self.voice_client.is_connected() and (len(self.voice_channel.members) == 1 or self.voice_client.is_playing() == False):
-                clear_all_voice_related_fields(self)
                 await self.voice_client.disconnect(force=True)
+                _clear_all_voice_related_fields(self)
+        
     
     @tasks.loop(minutes=20)
     async def listen_for_twitch_channels(self):
@@ -75,10 +75,10 @@ class Discord_Client(commands.Cog):
 
             for streamer in get_twitch_db_streamers():
                 if len(get_twitch_db_streamers()) > 0:
-                    json_channels = make_api_call_twitch('https://api.twitch.tv/helix/search/channels?live_only=true&query='+streamer.query)   
+                    json_channels = _make_api_call_twitch('https://api.twitch.tv/helix/search/channels?live_only=true&query='+streamer.query)   
                     ch = await self.bot.fetch_channel(channel_id)
                     
-                    await send_discord_notification_search_request(json_channels,streamer,ch)
+                    await  _send_discord_notification_search_request(json_channels,streamer,ch)
         except BaseException as e:
             await print_message_async(message='Could not notify about streams', error=str(e), came_from='Discord_Client')
 
@@ -91,12 +91,12 @@ class Discord_Client(commands.Cog):
             
             ch = await self.bot.fetch_channel(channel_id)
             await print_message_async(message='Sending requests to twitch api (specified game)', came_from='Discord_Client')
-            streams = make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
+            streams = _make_api_call_twitch('https://api.twitch.tv/helix/streams?type=live&game_id='+game_id)
 
             for stream in streams['data']:
                 streamer = Streamer(stream['user_id'],stream['user_login'],'https://www.twitch.tv/'+stream['user_login'],stream['started_at'])
                 list(map(lambda x: x.lower(), stream['tags']))
-                await send_discord_notification_helix_request(stream,streamer)
+                await _send_discord_notification_helix_request(stream,streamer)
         
         except BaseException as e:
             await print_message_async('Could not notify about streams',came_from='Discord_Client')
@@ -105,7 +105,7 @@ class Discord_Client(commands.Cog):
     @tasks.loop(minutes=2)
     async def listen_for_bot_is_alive(self):
         if self.voice_client.is_connected() == False and (len(self.youtube_queue) > 0 or self.yt_playing == True or self.radio_jsr_playing == True or self.radio_playing ==True):
-            clear_all_voice_related_fields(self)
+            _clear_all_voice_related_fields(self)
             await print_message_async('The bot was resurrected',came_from='Discord_Client')
         
     @commands.command()
@@ -188,14 +188,14 @@ class Discord_Client(commands.Cog):
         await self.async_cleanup()
         await super().close()
 
-async def send_discord_notification_search_request(json_channels,streamer: Streamer,channel) -> None:
+async def  _send_discord_notification_search_request(json_channels,streamer: Streamer,channel) -> None:
     for channels in json_channels['data']:
         #check if it is not the same stream
         if str(channels['id']) == str(streamer.id) and streamer.start_stream != str(channels['started_at']) and channel != None:
             update_stream_start_data(channels['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
             
-async def send_discord_notification_helix_request(stream:str, streamer:Streamer, channel: discord.VoiceChannel) -> None:
+async def _send_discord_notification_helix_request(stream:str, streamer:Streamer, channel: discord.VoiceChannel) -> None:
     for tag_stream in game_tags:
         has_tag = ((str.lower(tag_stream) in stream['tags']) or (str.lower(tag_stream) in str.lower(stream['title'])))
 
@@ -203,7 +203,7 @@ async def send_discord_notification_helix_request(stream:str, streamer:Streamer,
             update_stream_start_data(stream['started_at'], str(streamer.id))
             await channel.send(f'@here HEY! {streamer.query.upper()} IS LIVE \nCHECKOUT {streamer.stream_link}')
 
-def make_api_call_twitch(link) -> dict:
+def _make_api_call_twitch(link) -> dict:
     req = urllib.request.Request(link)
     req.add_header('Authorization', twitch_access)
     req.add_header('Client-Id', client_id)
@@ -211,7 +211,7 @@ def make_api_call_twitch(link) -> dict:
     content = urllib.request.urlopen(req).read()
     return json.loads(content)
 
-def clear_all_voice_related_fields(self:Discord_Client) -> None:
+def _clear_all_voice_related_fields(self:Discord_Client) -> None:
     self.voice_channel = None
     self.voice_client = None
     self.is_audio_stopping = False

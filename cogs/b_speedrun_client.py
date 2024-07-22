@@ -80,15 +80,15 @@ class Speedrun_Client(commands.Cog):
                 game_name:str = ctx.message.content.split('wr_run')[1].strip()
 
             if game_name == '':
-                game_id:str = await get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&offset={offset}&skip-empty=true',attr_field='id',random_run=True)
+                game_id:str = await _get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&offset={offset}&skip-empty=true',attr_field='id',random_run=True)
             else:
-                game_id:str = await get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&skip-empty=true&name={game_name}',attr_field='id',random_run=False)
+                game_id:str = await _get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&skip-empty=true&name={game_name}',attr_field='id',random_run=False)
 
             if game_id == '' and game_name != '':
                 await ctx.channel.send('Game was not found')
                 return
             
-            category_id:str = await get_value_from_api_answer(link_request=f'https://www.speedrun.com/api/v1/games/{game_id}/categories',attr_field= 'id')
+            category_id:str = await _get_value_from_api_answer(link_request=f'https://www.speedrun.com/api/v1/games/{game_id}/categories',attr_field= 'id')
             runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}?video-only=true',allow_redirects=False).text
             runs_json = json.loads(runs)
 
@@ -102,7 +102,7 @@ class Speedrun_Client(commands.Cog):
         except BaseException as e:
             await print_message_async(message='Erorr while sending wr run', came_from='Speedrun_Client', error=str(e))
 
-async def get_value_from_api_answer(link_request:str,attr_field:str,random_run:bool = True) -> str:
+async def _get_value_from_api_answer(link_request:str,attr_field:str,random_run:bool = True) -> str:
         if link_request == '':
             await print_message_async('The request link is empty')
             return

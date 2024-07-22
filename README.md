@@ -7,7 +7,7 @@
 * На Windows ```pip install -r requirements.txt``` и ```pip install -U discord.py[voice]```
 * На Linux 
   * установить пакет для работы с виртуальной средой ```sudo apt install virtualenv``` (debian, ubuntu, mint, pop os, zorin os)
-  * создание вируальной среды ```python3 -m venv catbot_venv```
+  * создание виртуальной среды ```python3 -m venv catbot_venv```
   * активирование виртуальной среды ```source catbot_venv/bin/activate```  
   * установка зависимостей ```pip install -r requirements.txt``` и ```python3 -m pip install -U discord.py[voice]```
 
