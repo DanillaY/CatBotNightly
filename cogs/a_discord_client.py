@@ -124,9 +124,10 @@ class Discord_Client(commands.Cog):
         '!resume - this command will resume the paused song 🔹\n\n'\
         '!status - this command will show current status of the bot🔥\n\n'\
         '!queue - this command will show the queue of the youtube videos🎼\n\n'\
-        '!jsr - this command accepts radio station name and streams random music from JetSetRadio.live🎉 (example: !jsr Future) if you wont set any radio then the bot will play random music from all jsr stations \n"Crank up the volume and wake up the neighbors!! Are you hearin this or what?  Show me what you got! I am counting on yall!"\n\n'\
-        '!eight_ball - this command will look into the future and tell you upcoming results to the question that bothers you 🎱🔮\n\n'\
+        '!jsr - this command accepts radio station name and streams random music from JetSetRadio.live🎉 (example: !jsr Future) if you wont set any radio then the bot will play random music from all jsr stations \n\n'\
         '!jsr_stations - this command will show all jsr stations that you could play 📻\n\n'\
+        '!skip_jsr - this command skips the current song and plays next song from the same station\n\n'\
+        '!eight_ball - this command will look into the future and tell you upcoming results to the question that bothers you 🎱🔮\n\n'\
         '!wr_run - this command accepts an optional game_name value and shows the random category world record from that game, if the game_name is not set then will show a random world record (example: !wr_run garfields nightmare)\n\n'\
         'also this bot is listening for some twitch channels and so you will get notification when they will start streaming'
         await ctx.send('```'+message+'```')

@@ -106,6 +106,18 @@ class Radio_Client(commands.Cog):
             await print_message_async(message='Could not stream music from jsr.live',error=str(e), came_from='Radio_Client')
     
     @commands.command()
+    async def skip_jsr(self,ctx,station:str = '') -> None:
+        try:
+            if self.discord_cog.radio_jsr_playing and self.discord_cog.yt_playing == False and self.discord_cog.radio_playing == False and self.discord_cog.is_audio_stopping == False:
+                self.discord_cog.is_audio_stopping = True
+                self.discord_cog.voice_client.stop()
+                self.discord_cog.radio_jsr_playing = False
+                self.discord_cog.is_audio_stopping = False
+                #await self.jsr(ctx,station=station)
+        except BaseException as e:
+            await print_message_async(message='Error while skipping the jsr song',error=str(e),came_from='Radio_Client')
+    
+    @commands.command()
     async def jsr_stations(self,ctx) -> None:
         tup_stations: tuple[str] = get_stations_jsr()
         message = ''
@@ -204,14 +216,14 @@ def _join_radio_info(radios:list[Radio]) -> str:
             message += radio.id + ' | ' + radio.title + ' | ' + radio.country + '\n'
     return message
     
-#could play a bump or static before radio music for full radio immersion | 20% for static, 20% for bump and 60% for the music
+#could play a bump or static before radio music for full radio immersion
 async def _play_filler_or_music(self: Radio_JSR,ctx, radio:Radio_JSR,station:str) -> None:
-    random.seed(datetime.now().second)
+    random.seed(datetime.now().second + random.randint(1,4) - random.randint(1,5))
     radio_determinant = random.randint(1,10)
     
     if radio_determinant <= 2 :
         await _play_radio(self,ctx,random.choice(self.bumps),'radio_jsr',station)
-    elif radio_determinant == 5 or radio_determinant == 6:
+    elif radio_determinant == 5:
         await _play_radio(self,ctx,'https://jetsetradio.live/radio/stations/static.mp3','radio_jsr',station)
     else:
         await _play_radio(self,ctx,radio.song_link,'radio_jsr',station)

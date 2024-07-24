@@ -32,11 +32,10 @@ class Youtube_Client(commands.Cog):
 
     @commands.command()
     async def skip_yt(self,ctx):
-        if ctx.author.voice != None and self.discord_cog.yt_playing == True:
-            if self.discord_cog.voice_client.is_playing():
-                self.discord_cog.voice_client.stop()
-                self.discord_cog.yt_playing = False
-                await self.yt(self.discord_cog.youtube_queue[0])
+        if ctx.author.voice != None and self.discord_cog.yt_playing == True and self.discord_cog.voice_client.is_playing():
+            self.discord_cog.voice_client.stop()
+            self.discord_cog.yt_playing = False
+            await self.yt(self.discord_cog.youtube_queue[0])
         else:
             await ctx.channel.send('Could not skip the song')
 
