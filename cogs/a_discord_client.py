@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import urllib.request
 
 import discord.ext
+import requests
 from cogs.c_radio_client import Radio_Client
 from cogs.b_youtube_client import Youtube_Client
 from cogs.c_audio_client import Audio_Client
@@ -132,10 +133,19 @@ class Discord_Client(commands.Cog):
 
     @commands.command()
     async def cat_pic(self,ctx) -> None:
-        urllib.request.urlretrieve('https://cataas.com/cat', 'cats/cat.jpg')
-        await print_message_async(message='Sending a cat picture',came_from='Discord_Client')
-        await ctx.send(file = discord.File('cats/cat.jpg'))
-        await ctx.send.add_reaction('🐱')
+        try:
+            cat_response:str = requests.get('https://api.thecatapi.com/v1/images/search',allow_redirects=False).text
+            json_cat = json.loads(cat_response)
+            cat_url = json_cat[0]['url']
+
+            with open('cats/cat.jpg','wb') as output:
+                output.write(requests.get(cat_url,stream=True).content)
+
+            await print_message_async(message='Sending a cat picture',came_from='Discord_Client')
+            message = await ctx.send(file = discord.File('cats/cat.jpg'))
+            await message.add_reaction('🐱')
+        except BaseException as e:
+            print(str(e))
 
     @commands.command()
     async def cat_fact(self,ctx) -> None:
