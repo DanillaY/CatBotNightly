@@ -145,7 +145,7 @@ class Discord_Client(commands.Cog):
             message = await ctx.send(file = discord.File('cats/cat.jpg'))
             await message.add_reaction('🐱')
         except BaseException as e:
-            print(str(e))
+            await print_message_async(message='Error while getting a cat',error=str(e),came_from='Discord_Client')
 
     @commands.command()
     async def cat_fact(self,ctx) -> None:
