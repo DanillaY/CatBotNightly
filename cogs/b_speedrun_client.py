@@ -73,24 +73,35 @@ class Speedrun_Client(commands.Cog):
     async def wr_run(self,ctx,game_name:str='') -> None:
         try:
 
-            random.seed(datetime.now().second)
-            offset = random.randint(1,41000) #api doc qote "The API does not provide the total number of elements for each collection, so API clients must fetch all pages until no more results are available." Dont do that, because the number of api calls would be 1000+
-
+            random.seed(datetime.now().second * random.randint(1,10))
+            offset = random.randint(1,4100) #api doc qote "The API does not provide the total number of elements for each collection, so API clients must fetch all pages until no more results are available." Dont do that, because the number of api calls would be 1000+
             if game_name != '':
                 game_name:str = ctx.message.content.split('wr_run')[1].strip()
-
-            if game_name == '':
-                game_id:str = await _get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&offset={offset}&skip-empty=true',attr_field='id',random_run=True)
-            else:
                 game_id:str = await _get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&skip-empty=true&name={game_name}',attr_field='id',random_run=False)
+            else:
+                game_id:str = await _get_value_from_api_answer(link_request= f'https://www.speedrun.com/api/v1/games?max=20&offset={offset}&skip-empty=true',attr_field='id',random_run=True)
 
             if game_id == '' and game_name != '':
                 await ctx.channel.send('Game was not found')
                 return
+
+            category_id = ''
+            categories:str = get(f'https://www.speedrun.com/api/v1/games/{game_id}/categories', allow_redirects=False).json()
+            for category in categories['data']:
+                if category['type'] == 'per-game':
+                    category_id = category['id']
+                    break
             
-            category_id:str = await _get_value_from_api_answer(link_request=f'https://www.speedrun.com/api/v1/games/{game_id}/categories',attr_field= 'id')
+            if category_id == '':
+                await self.wr_run(ctx,game_name)
+                return
+            
             runs:str = get(f'https://www.speedrun.com/api/v1/leaderboards/{game_id}/category/{category_id}?video-only=true',allow_redirects=False).text
             runs_json = json.loads(runs)
+
+            if len(runs_json['data']['runs']) == 0:
+                await self.wr_run(ctx,game_name)
+                return
 
             world_record_run = runs_json['data']['runs'][0]
             speedrun_link = world_record_run['run']['weblink']
@@ -110,6 +121,10 @@ async def _get_value_from_api_answer(link_request:str,attr_field:str,random_run:
         api_answer:str = get(link_request, allow_redirects=False).text
         request_list_json = json.loads(api_answer)
         json_items: list[str] = []
+
+        if request_list_json['pagination']['size'] == 0:
+            await print_message_async(message='The data has no items',came_from='Speedrun_Client')
+            return ''
 
         for item in request_list_json['data']:
             json_items.append(item[attr_field])

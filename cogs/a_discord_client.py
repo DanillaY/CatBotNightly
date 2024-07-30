@@ -69,7 +69,7 @@ class Discord_Client(commands.Cog):
                 _clear_all_voice_related_fields(self)
         
     
-    @tasks.loop(hours=2)
+    @tasks.loop(minutes=40)
     async def listen_for_twitch_channels(self):
         try:
             await print_message_async(message='Sending requests to twitch api (folowed channles)', came_from='Discord_Client')
@@ -83,7 +83,7 @@ class Discord_Client(commands.Cog):
         except BaseException as e:
             await print_message_async(message='Could not notify about streams', error=str(e), came_from='Discord_Client')
 
-    @tasks.loop(hours=2)
+    @tasks.loop(minutes=40)
     async def listen_for_twitch_channels_specific(self):
         try:
             if(len(game_tags) == 1):
